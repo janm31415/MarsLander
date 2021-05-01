@@ -49,29 +49,29 @@ void find_landingzone(int& x0, int& x1, const std::vector<int>& heights) {
 //#define OUTOFBOUNDSCLAMPING
 
 int clamp_angle(int angle, int R) {
-  if (angle>R+15)
-    angle = R+15;
-  else if (angle < R-15)
-    angle = R-15;
+  if (angle>R+maximum_angle_rotation)
+    angle = R+maximum_angle_rotation;
+  else if (angle < R-maximum_angle_rotation)
+    angle = R-maximum_angle_rotation;
 #if defined(OUTOFBOUNDSCLAMPING)
-  if (angle>90)
-    angle = 90;
-  if (angle<-90)
-    angle = -90;
+  if (angle>maximum_angle)
+    angle = maximum_angle;
+  if (angle<-maximum_angle)
+    angle = -maximum_angle;
 #endif
   return angle;
 }
 
 int clamp_thrust(int thrust, int P) {
-  if (thrust > P+1)
-    thrust = P+1;
-  if (thrust < P-1)
-    thrust = P-1;
+  if (thrust > P+maximum_thrust_change)
+    thrust = P+maximum_thrust_change;
+  if (thrust < P-maximum_thrust_change)
+    thrust = P-maximum_thrust_change;
 #if defined(OUTOFBOUNDSCLAMPING)
   if (thrust < 0)
     thrust = 0;
-  if (thrust > 4)
-    thrust = 4;
+  if (thrust > maximum_thrust)
+    thrust = maximum_thrust;
 #endif
   return thrust;
 }
@@ -82,10 +82,10 @@ chromosome generate_random_chromosome(int init_R, int init_P) {
   int last_R = init_R;
   int last_P = init_P;
   for (int i = 0; i < chromosome_size; ++i) {
-    int R = last_R + (int)(rkiss.rand64()%31)-15;
-    R = R<-90?-90:R>90?90:R;
-    int P = last_P + (int)(rkiss.rand64()%3)-1;
-    P = P<0?0:P>4?4:P;
+    int R = last_R + (int)(rkiss.rand64()%(2*maximum_angle_rotation+1))-maximum_angle_rotation;
+    R = R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
+    int P = last_P + (int)(rkiss.rand64()%(2*maximum_thrust_change+1))-maximum_thrust_change;
+    P = P<0?0:P>maximum_thrust?maximum_thrust:P;
     gene g;
     g.angle = R;
     g.thrust = P;
@@ -149,4 +149,25 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
   simdata.F = F;
   simdata.R = R;
   simdata.P = P;
+}
+
+int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
+  int score = 0;
+  path.clear();
+  path.reserve(chromosome_size);
+  simulation_data sd = simdata;
+  for (int i = 0; i < chromosome_size; ++i) {
+    simulate(sd, c[i].angle, c[i].thrust);
+    int X = (int)std::round(sd.p[0]);
+    int Y = (int)std::round(sd.p[1]);
+    int HS = (int)std::round(sd.v[0]);
+    int VS = (int)std::round(sd.v[1]);
+    path.emplace_back(X,Y);
+    if (Y<=heights[X]) {
+      while (path.size()<chromosome_size)
+        path.emplace_back(X,Y);
+      break;
+    }
+  }
+  return score;
 }

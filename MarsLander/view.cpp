@@ -124,7 +124,7 @@ _viewport_pos_x(V_X), _viewport_pos_y(V_Y)
 )";
 
   init_model(_m, _script);
- 
+  make_random_population(_m);
   _prepare_render();
   }
 
@@ -539,7 +539,9 @@ void view::_script_window()
 
 void view::_prepare_render()
   {
+  _m.delete_render_objects();
   fill_terrain_data(_m);
+  simulate_population(_m);
   }
 
 void view::_control_window()
@@ -563,6 +565,7 @@ void view::_control_window()
 
   if (ImGui::Button("Start")) {
     init_model(_m, _script);
+    make_random_population(_m);
     _prepare_render();
   }
 
@@ -622,6 +625,32 @@ void view::loop()
     gl_check_error("_m._vbo_array->release()");
     _m._vao->release();
     gl_check_error("_m._vao->release()");
+    
+    for (int i = 0; i < _m._path_vao.size(); ++i) {
+      _m._path_vao[i]->bind();
+      gl_check_error("_path_vao[i]->bind()");
+      _m._path_vbo_array[i]->bind();
+      gl_check_error("_path_vbo_array[i]->bind()");
+
+      _program->bind();
+      gl_check_error("_program->bind()");
+
+      _program->enable_attribute_array(0);
+      gl_check_error("_program->enable_attribute_array(0)");
+      _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
+      gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
+
+      glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.current_population.front().size()));
+      gl_check_error("glDrawArrays");
+      
+      _program->release();
+      gl_check_error("_program->release()");
+      _m._path_vbo_array[i]->release();
+      gl_check_error("_m._path_vbo_array[i]->release()");
+      _m._path_vao[i]->release();
+      gl_check_error("_m._path_vao[i]->release()");
+    }
+    
     _fbo->release();
     gl_check_error("_fbo->release()");
 

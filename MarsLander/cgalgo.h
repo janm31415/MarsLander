@@ -11,6 +11,14 @@
 
 #define W 7000
 #define H 3000
+#define chromosome_size 60
+#define population_size 100
+#define maximum_vertical_speed 40
+#define maximum_horizontal_speed 20
+#define maximum_angle_rotation 15
+#define maximum_angle 90
+#define maximum_thrust 4
+#define maximum_thrust_change 1
 
 // random number generator
 class RKISS {
@@ -274,9 +282,6 @@ struct gene {
 typedef std::vector<gene> chromosome;
 typedef std::vector<chromosome> population;
 
-#define chromosome_size 60
-#define population_size 100
-
 extern std::vector<vec2<int>> surface_points;
 extern std::vector<int> heights;
 extern int landing_zone_x0;
@@ -293,3 +298,5 @@ population generate_random_population(int init_R, int init_P);
  and fills simdata with the input data for the mars lander.
  */
 void read_input(std::stringstream& strcin, std::stringstream& strerr);
+
+int evaluate(std::vector<vec2<float>>& path, const chromosome& c);
