@@ -34,6 +34,8 @@ void init_model(model& m, const std::string& s);
 
 void make_random_population(model& m);
 
+void make_next_generation(model& m);
+
 void fill_terrain_data(model& m);
 
 void simulate_population(model& m);

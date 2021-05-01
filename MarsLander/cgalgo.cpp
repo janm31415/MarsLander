@@ -3,9 +3,9 @@
 //#pragma GCC target("avx2")  //Enable AVX
 
 /*
-Based on the following blog post
-https://www.codingame.com/blog/genetic-algorithm-mars-lander/
-*/
+ Based on the following blog post
+ https://www.codingame.com/blog/genetic-algorithm-mars-lander/
+ */
 
 #include "cgalgo.h"
 
@@ -160,6 +160,7 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
 #define large_speed_penalty 100
 #define fuel_consumption_multiplier 10
 #define did_not_reach_solid_ground_multiplier 5
+#define lz_buffer 5
 
 int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
   int score = 0;
@@ -187,8 +188,20 @@ int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
   int Y = (int)std::round(sd.p[1]);
   if (Y > heights[X])
     score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
-  vec2<float> lz((landing_zone_x0+landing_zone_x1)*0.5, heights[landing_zone_x0]);
-  score += (int)distance(sd.p, lz);
+  
+  vec2<float> lz;
+  //vec2<float> lz((landing_zone_x0+landing_zone_x1)*0.5, heights[landing_zone_x0]);
+  
+  if (X < landing_zone_x0+lz_buffer) {
+    lz = vec2<float>(landing_zone_x0+lz_buffer, heights[landing_zone_x0]);
+  } else if (X > landing_zone_x1-lz_buffer) {
+    lz = vec2<float>(landing_zone_x1-lz_buffer, heights[landing_zone_x0]);
+  } else {
+    lz = vec2<float>(X, heights[X]);
+  }
+  
+  score += (int)distance(sd.p, lz)*500;
+  
   if (std::abs(sd_prev2.R)>maximum_angle_rotation)
     score += score_zero_angle_is_not_possible;
   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
@@ -220,4 +233,118 @@ std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& scor
   }
   
   return out;
+}
+
+#define elitarism_factor 0.1
+#define mutation_chance 0.01
+
+int clamp_angle(int R) {
+  return R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
+}
+
+int clamp_thrust(int P) {
+  return P<0?0:P>maximum_thrust?maximum_thrust:P;
+}
+
+void make_children(chromosome& child1, chromosome& child2, const chromosome& parent1, const chromosome& parent2) {
+  child1.reserve(chromosome_size);
+  child2.reserve(chromosome_size);
+  child1.clear();
+  child2.clear();
+  double r = (double)(rkiss.rand64()%100000)/100000.0;
+  double r2 = 1.0-r;
+  for (int i = 0; i < chromosome_size; ++i) {
+    gene g1;
+    g1.angle = parent1[i].angle*r+parent2[i].angle*r2;
+    g1.thrust = parent1[i].thrust*r+parent2[i].thrust*r2;
+    gene g2;
+    g2.angle = parent1[i].angle*r2+parent2[i].angle*r;
+    g2.thrust = parent1[i].thrust*r2+parent2[i].thrust*r;
+    
+    double r3 = (double)(rkiss.rand64()%100000)/100000.0;
+    if (r3 < mutation_chance) {
+      g1.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
+      g1.thrust = rkiss.rand64()%(maximum_thrust+1);
+    }
+    double r4 = (double)(rkiss.rand64()%100000)/100000.0;
+    if (r4 < mutation_chance) {
+      g2.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
+      g2.thrust = rkiss.rand64()%(maximum_thrust+1);
+    }
+    
+    g1.angle = clamp_angle(g1.angle);
+    g1.thrust = clamp_thrust(g1.thrust);
+    g2.angle = clamp_angle(g2.angle);
+    g2.thrust = clamp_thrust(g2.thrust);
+    
+    if (i > 0) {
+      const auto& pg1 = child1[i-1];
+      const auto& pg2 = child2[i-1];
+      if (g1.angle>pg1.angle+maximum_angle_rotation)
+        g1.angle = pg1.angle+maximum_angle_rotation;
+      if (g1.angle < pg1.angle-maximum_angle_rotation)
+        g1.angle = pg1.angle-maximum_angle_rotation;
+      if (g1.thrust>pg1.thrust+maximum_thrust_change)
+        g1.thrust = pg1.thrust+maximum_thrust_change;
+      if (g1.thrust < pg1.thrust-maximum_thrust_change)
+        g1.thrust = pg1.thrust-maximum_thrust_change;
+        
+      if (g2.angle>pg2.angle+maximum_angle_rotation)
+        g2.angle = pg2.angle+maximum_angle_rotation;
+      if (g2.angle < pg2.angle-maximum_angle_rotation)
+        g2.angle = pg2.angle-maximum_angle_rotation;
+      if (g2.thrust>pg2.thrust+maximum_thrust_change)
+        g2.thrust = pg2.thrust+maximum_thrust_change;
+      if (g2.thrust < pg2.thrust-maximum_thrust_change)
+        g2.thrust = pg2.thrust-maximum_thrust_change;
+              
+    }
+  
+    child1.push_back(g1);
+    child2.push_back(g2);
+    
+  }
+}
+
+population make_next_generation(const population& current, const std::vector<double>& score) {
+  population new_pop;
+  new_pop.reserve(current.size());
+  std::vector<std::pair<double, int>> score_index;
+  score_index.reserve(score.size());
+  for (int i = 0; i < score.size(); ++i)
+  score_index.emplace_back(score[i], i);
+  std::sort(score_index.begin(), score_index.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
+  int elitair_chromosomes_to_copy = (int)(score.size()*elitarism_factor);
+  if ((score.size()-elitair_chromosomes_to_copy)%2)
+    ++elitair_chromosomes_to_copy;
+  
+  for (int i=0; i < elitair_chromosomes_to_copy; ++i) {
+    new_pop.push_back(current[score_index[i].second]);
+  }
+  
+  const int children = (current.size() - elitair_chromosomes_to_copy);
+  
+  for (int i = 0; i < children/2; ++i) {
+    double r = (double)(rkiss.rand64()%100000)/100000.0;
+    int idx = 0;
+    while (score_index[idx].first>r && idx < score_index.size())
+      ++idx;
+    --idx;
+    int first_parent_index = score_index[idx].second;
+    int second_parent_index = first_parent_index;
+    while (second_parent_index == first_parent_index) {
+      r = (double)(rkiss.rand64()%100000)/100000.0;
+      idx = 0;
+      while (score_index[idx].first>r && idx < score_index.size())
+        ++idx;
+      --idx;
+      second_parent_index = score_index[idx].second;
+    }
+    chromosome c1, c2;
+    make_children(c1, c2, current[first_parent_index], current[second_parent_index]);
+    new_pop.push_back(c1);
+    new_pop.push_back(c2);
+  }
+    
+  return new_pop;
 }

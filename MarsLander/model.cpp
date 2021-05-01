@@ -75,6 +75,10 @@ void make_random_population(model& m) {
   m.current_population = generate_random_population(simdata.R, simdata.P);
 }
 
+void make_next_generation(model& m) {
+  m.current_population = make_next_generation(m.current_population, m.current_population_normalized_score);
+}
+
 void fill_terrain_data(model& m)
 {
   m.number_of_terrain_points = surface_points.size();

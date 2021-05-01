@@ -569,6 +569,22 @@ void view::_control_window()
     make_random_population(_m);
     _prepare_render();
   }
+  if (ImGui::Button("Next")) {
+    make_next_generation(_m);
+    _prepare_render();
+  }
+  if (ImGui::Button("Next+10")) {
+    for (int i = 0; i < 10; ++i) {
+      make_next_generation(_m);
+      _prepare_render();
+      }
+  }
+  if (ImGui::Button("Next+100")) {
+    for (int i = 0; i < 100; ++i) {
+      make_next_generation(_m);
+      _prepare_render();
+      }
+  }
 
   ImGui::End();
   }

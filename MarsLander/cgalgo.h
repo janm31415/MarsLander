@@ -11,8 +11,8 @@
 
 #define W 7000
 #define H 3000
-#define chromosome_size 60
-#define population_size 100
+#define chromosome_size 200
+#define population_size 200
 #define maximum_vertical_speed 40
 #define maximum_horizontal_speed 20
 #define maximum_angle_rotation 15
@@ -310,3 +310,5 @@ int evaluate(std::vector<vec2<float>>& path, const chromosome& c);
  The scores are inverted, meaning that now a larger value is better than a smaller value.
  */
 std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score);
+
+population make_next_generation(const population& current, const std::vector<double>& score);
