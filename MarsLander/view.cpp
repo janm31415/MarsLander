@@ -645,7 +645,13 @@ void view::loop()
     _m._vao->release();
     gl_check_error("_m._vao->release()");
     
-    for (int i = 0; i < _m._path_vao.size(); ++i) {
+    int best_index = 0;
+    for (int i = 0; i <= _m._path_vao.size(); ++i) {
+      bool last_draw = false;
+      if (i == _m._path_vao.size()) {
+        i = best_index;
+        last_draw = true;
+      }
       _m._path_vao[i]->bind();
       gl_check_error("_path_vao[i]->bind()");
       _m._path_vbo_array[i]->bind();
@@ -659,7 +665,12 @@ void view::loop()
       _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
       gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
       double s = _m.current_population_normalized_score[i];
-      _program->set_uniform_value("iColor", (GLfloat)s, (GLfloat)s, (GLfloat)1, (GLfloat)1);
+      if (s<1.0)
+        _program->set_uniform_value("iColor", (GLfloat)s, (GLfloat)s, (GLfloat)1, (GLfloat)1);
+      else {
+        _program->set_uniform_value("iColor", (GLfloat)0, (GLfloat)1, (GLfloat)0, (GLfloat)1);
+        best_index = i;
+        }
       
       glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.current_population.front().size()));
       gl_check_error("glDrawArrays");
@@ -670,6 +681,8 @@ void view::loop()
       gl_check_error("_m._path_vbo_array[i]->release()");
       _m._path_vao[i]->release();
       gl_check_error("_m._path_vao[i]->release()");
+      if (last_draw)
+        break;
     }
     
     _fbo->release();

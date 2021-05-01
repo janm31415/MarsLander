@@ -190,7 +190,6 @@ int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
     score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
   
   vec2<float> lz;
-  //vec2<float> lz((landing_zone_x0+landing_zone_x1)*0.5, heights[landing_zone_x0]);
   
   if (X < landing_zone_x0+lz_buffer) {
     lz = vec2<float>(landing_zone_x0+lz_buffer, heights[landing_zone_x0]);
