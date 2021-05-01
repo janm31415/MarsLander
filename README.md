@@ -12,7 +12,7 @@ You can build MarsLander without downloading other external projects (as all nec
 
 Screenshot
 ----------
-![](images/marslander.png)
+![](images/MarsLander.png)
 
 What is it exactly?
 -------------------
