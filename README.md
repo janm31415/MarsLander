@@ -3,7 +3,7 @@ Tool for solving the Mars Lander puzzle game from [Coding Games](https://www.cod
 
 Building
 --------
-First of all, meshscript uses submodules, so don't forget to also call
+First of all, MarsLander uses submodules, so don't forget to also call
 
      git submodule update --init
 
