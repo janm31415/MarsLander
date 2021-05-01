@@ -87,7 +87,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 
 if (WIN32)
-add_executable(pief WIN32 ${HDRS} ${SRCS} ${GLEW} ${IMGUI} ${JSON})
+add_executable(MarsLander WIN32 ${HDRS} ${SRCS} ${GLEW} ${IMGUI} ${JSON})
 else()
 add_executable(MarsLander ${HDRS} ${SRCS} ${GLEW} ${IMGUI} ${JSON})
 endif(WIN32)
