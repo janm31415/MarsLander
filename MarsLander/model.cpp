@@ -111,9 +111,11 @@ void fill_terrain_data(model& m)
 void simulate_population(model& m) {
   m._path_vao.clear();
   m._path_vbo_array.clear();
+  std::vector<int> scores;
+  scores.reserve(m.current_population.size());
   for (int i = 0; i < m.current_population.size(); ++i) {
     std::vector<vec2<float>> path;
-    evaluate(path, m.current_population[i]);
+    scores.push_back(evaluate(path, m.current_population[i]));
     std::vector<GLfloat> vertices;
     vertices.reserve(path.size() * 2);
     for (uint64_t i = 0; i < path.size(); ++i)
@@ -140,5 +142,9 @@ void simulate_population(model& m) {
     gl_check_error("m._path_vao.back()->release()");
     m._path_vbo_array.back()->release();
     gl_check_error("m._path_vbo_array.back()->release()");
+  }
+  m.current_population_normalized_score = normalize_scores_roulette_wheel(scores);
+  for (auto s : m.current_population_normalized_score) {
+    Logging::Info() << "score " << s << "\n";
   }
 }

@@ -642,7 +642,8 @@ void view::loop()
       gl_check_error("_program->enable_attribute_array(0)");
       _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
       gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
-      _program->set_uniform_value("iColor", (GLfloat)0, (GLfloat)1, (GLfloat)1, (GLfloat)1);
+      double s = _m.current_population_normalized_score[i];
+      _program->set_uniform_value("iColor", (GLfloat)s, (GLfloat)s, (GLfloat)1, (GLfloat)1);
       
       glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.current_population.front().size()));
       gl_check_error("glDrawArrays");

@@ -2,6 +2,11 @@
 //#pragma GCC option("arch=native","tune=native","no-zero-upper") //Enable AVX
 //#pragma GCC target("avx2")  //Enable AVX
 
+/*
+Based on the following blog post
+https://www.codingame.com/blog/genetic-algorithm-mars-lander/
+*/
+
 #include "cgalgo.h"
 
 std::vector<vec2<int>> surface_points;
@@ -151,11 +156,18 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
   simdata.P = P;
 }
 
+#define score_zero_angle_is_not_possible 500
+#define large_speed_penalty 100
+#define fuel_consumption_multiplier 10
+#define did_not_reach_solid_ground_multiplier 5
+
 int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
   int score = 0;
   path.clear();
   path.reserve(chromosome_size);
   simulation_data sd = simdata;
+  simulation_data sd_prev = sd;
+  simulation_data sd_prev2 = sd_prev;
   for (int i = 0; i < chromosome_size; ++i) {
     simulate(sd, c[i].angle, c[i].thrust);
     int X = (int)std::round(sd.p[0]);
@@ -168,6 +180,44 @@ int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
         path.emplace_back(X,Y);
       break;
     }
+    sd_prev2 = sd_prev;
+    sd_prev = sd;
   }
+  int X = (int)std::round(sd.p[0]);
+  int Y = (int)std::round(sd.p[1]);
+  if (Y > heights[X])
+    score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
+  vec2<float> lz((landing_zone_x0+landing_zone_x1)*0.5, heights[landing_zone_x0]);
+  score += (int)distance(sd.p, lz);
+  if (std::abs(sd_prev2.R)>maximum_angle_rotation)
+    score += score_zero_angle_is_not_possible;
+  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+    score += (std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
+  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+    score += (std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
+  score += (simdata.F - sd.F)*fuel_consumption_multiplier;
   return score;
+}
+
+std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score) {
+  int M = *std::max_element(score.begin(), score.end());
+  int sum = 0;
+  for (auto s : score)
+    sum += (M-s);
+  std::vector<std::pair<double, int>> temp;
+  temp.reserve(score.size());
+  for (int i = 0; i < score.size(); ++i) {
+    double new_score = (double)(M-score[i])/(double)sum;
+    temp.emplace_back(new_score, i);
+  }
+  std::sort(temp.begin(), temp.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
+  std::vector<double> out(score.size(), 0.0);
+  
+  for (int i = 0; i < temp.size(); ++i) {
+    for (int j = i; j < temp.size(); ++j) {
+      out[temp[i].second] += temp[j].first;
+    }
+  }
+  
+  return out;
 }
