@@ -280,13 +280,14 @@ void main()
   std::string fragment = R"(#version 330 core
 precision mediump float;
 precision mediump int;
+uniform vec4      iColor;
 
 out vec4 FragColor;
 
 
 void main()
   {
-  FragColor = vec4(1, 0, 0, 1);
+  FragColor = iColor;
   }
 )";
 
@@ -579,7 +580,7 @@ void view::_log_window()
   auto log_messages = Logging::GetInstance().pop_messages();
 
   if (!log_messages.empty())
-    log.AddLog(log_messages.c_str());
+    log.AddLog("%s", log_messages.c_str());
 
   ImGui::SetNextWindowSize(ImVec2((float)V_W, (float)(_h - 3 * V_Y - V_H)), ImGuiCond_Always);
   ImGui::SetNextWindowPos(ImVec2((float)V_X, (float)(2 * V_Y + V_H)), ImGuiCond_Always);
@@ -600,7 +601,7 @@ void view::loop()
     _fbo->bind();
     gl_check_error("_fbo->bind()");
     glViewport(0, 0, _viewport_w, _viewport_h);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);     
 
     _m._vao->bind();
@@ -615,6 +616,8 @@ void view::loop()
     gl_check_error("_program->enable_attribute_array(0)");
     _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
     gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
+
+    _program->set_uniform_value("iColor", (GLfloat)1, (GLfloat)0, (GLfloat)0, (GLfloat)1);
 
     glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.number_of_terrain_points));
     gl_check_error("glDrawArrays");
@@ -639,7 +642,8 @@ void view::loop()
       gl_check_error("_program->enable_attribute_array(0)");
       _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
       gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
-
+      _program->set_uniform_value("iColor", (GLfloat)0, (GLfloat)1, (GLfloat)1, (GLfloat)1);
+      
       glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.current_population.front().size()));
       gl_check_error("glDrawArrays");
       
