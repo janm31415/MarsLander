@@ -14,13 +14,15 @@ struct model
   ~model();
 
   void delete_render_objects();
-
-  std::vector<double> values;
+  
+  int number_of_terrain_points;
 
   vertex_array_object* _vao;
   buffer_object *_vbo_array;
   };
 
 
-void fill_render_data(model& m, const std::vector<double>& values);
+void init_model(model& m, const std::string& s);
+
+void fill_terrain_data(model& m);
 

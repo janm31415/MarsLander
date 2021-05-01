@@ -112,18 +112,18 @@ _viewport_pos_x(V_X), _viewport_pos_y(V_Y)
   _md.prev_mouse_y = 0.f;
   _md.wheel_rotation = 0.f;
   
-  _m.values.push_back(0);
-  _m.values.push_back(1);
-  _m.values.push_back(2);
-  _m.values.push_back(3);
-  _m.values.push_back(4);
-  _m.values.push_back(5);
-  _m.values.push_back(6);
-  _m.values.push_back(7);
-  _m.values.push_back(8);
-  _m.values.push_back(7);
-  _m.values.push_back(6);
-  _m.values.push_back(5);
+  _script=R"(7
+0 100
+1000 500
+1500 1500
+3000 1000
+4000 150
+5500 150
+6999 800
+2500 2700 0 0 550 0 0
+)";
+
+  init_model(_m, _script);
  
   _prepare_render();
   }
@@ -539,7 +539,7 @@ void view::_script_window()
 
 void view::_prepare_render()
   {
-  fill_render_data(_m, _m.values);
+  fill_terrain_data(_m);
   }
 
 void view::_control_window()
@@ -560,6 +560,11 @@ void view::_control_window()
     ImGui::End();
     return;
     }
+
+  if (ImGui::Button("Start")) {
+    init_model(_m, _script);
+    _prepare_render();
+  }
 
   ImGui::End();
   }
@@ -608,7 +613,7 @@ void view::loop()
     _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
     gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
 
-    glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.values.size()));
+    glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.number_of_terrain_points));
     gl_check_error("glDrawArrays");
     
     _program->release();

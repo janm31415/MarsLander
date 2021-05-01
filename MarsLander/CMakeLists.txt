@@ -30,6 +30,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../imgui_sdl/imguifilesystem.cpp
 
 set(HDRS
 buffer_object.h
+cgalgo.h
 depthtexture.h
 frame_buffer_object.h
 logging.h
@@ -47,6 +48,7 @@ view.h
 	
 set(SRCS
 buffer_object.cpp
+cgalgo.cpp
 depthtexture.cpp
 frame_buffer_object.cpp
 logging.cpp
