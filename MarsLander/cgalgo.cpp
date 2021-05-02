@@ -84,31 +84,35 @@ int clamp_thrust(int thrust, int P) {
   return thrust;
 }
 
-chromosome generate_random_chromosome(int init_R, int init_P) {
+int clamp_angle(int R) {
+  return R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
+}
+
+int clamp_thrust(int P) {
+  return P<0?0:P>maximum_thrust?maximum_thrust:P;
+}
+
+gene generate_random_gene() {
+  gene g;
+  g.angle = (int)(rkiss.rand64()%(2*maximum_angle_rotation+1))-maximum_angle_rotation;
+  g.thrust = (int)(rkiss.rand64()%(2*maximum_thrust_change+1))-maximum_thrust_change;
+  return g;
+}
+
+chromosome generate_random_chromosome() {
   chromosome c;
   c.reserve(chromosome_size);
-  int last_R = init_R;
-  int last_P = init_P;
   for (int i = 0; i < chromosome_size; ++i) {
-    int R = last_R + (int)(rkiss.rand64()%(2*maximum_angle_rotation+1))-maximum_angle_rotation;
-    R = R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
-    int P = last_P + (int)(rkiss.rand64()%(2*maximum_thrust_change+1))-maximum_thrust_change;
-    P = P<0?0:P>maximum_thrust?maximum_thrust:P;
-    gene g;
-    g.angle = R;
-    g.thrust = P;
-    last_R = R;
-    last_P = P;
-    c.push_back(g);
+    c.push_back(generate_random_gene());
   }
   return c;
 }
 
-population generate_random_population(int init_R, int init_P) {
+population generate_random_population() {
   population p;
   p.reserve(population_size);
   for (int i = 0; i < population_size; ++i) {
-    p.emplace_back(generate_random_chromosome(init_R, init_P));
+    p.emplace_back(generate_random_chromosome());
   }
   return p;
 }
@@ -189,8 +193,14 @@ simulation_data run_chromosome(const chromosome& c) {
   int PX=(int)std::round(sd.p[0]); // previous X
   int PY=(int)std::round(sd.p[1]); // previous Y
   int i = 0;
+  int angle = sd.R;
+  int thrust = sd.P;
   for (; i < chromosome_size; ++i) {
-    simulate(sd, c[i].angle, c[i].thrust);
+    angle += c[i].angle;
+    thrust += c[i].thrust;
+    angle = clamp_angle(angle);
+    thrust = clamp_thrust(thrust);
+    simulate(sd, angle, thrust);
     int X = (int)std::round(sd.p[0]);
     int Y = (int)std::round(sd.p[1]);
     int HS = (int)std::round(sd.v[0]);
@@ -218,8 +228,14 @@ int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
   int PX=(int)std::round(sd.p[0]); // previous X
   int PY=(int)std::round(sd.p[1]); // previous Y
   int i = 0;
+  int angle = sd.R;
+  int thrust = sd.P;
   for (; i < chromosome_size; ++i) {
-    simulate(sd, c[i].angle, c[i].thrust);
+    angle += c[i].angle;
+    thrust += c[i].thrust;
+    angle = clamp_angle(angle);
+    thrust = clamp_thrust(thrust);
+    simulate(sd, angle, thrust);
     int X = (int)std::round(sd.p[0]);
     int Y = (int)std::round(sd.p[1]);
     int HS = (int)std::round(sd.v[0]);
@@ -245,20 +261,21 @@ int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
   
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
     score -= landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
-    } else {
-    c[i-1].angle = 0;
+  } else {
+    c[i-1].angle = -sd_prev2.R;
     c[i].angle = 0;
     sd = sd_prev2;
-    simulate(sd, c[i-1].angle, c[i-1].thrust);
-    simulate(sd, c[i].angle, c[i].thrust);
-    }
-    
+    int t = clamp_thrust(sd_prev2.P + c[i-1].thrust);
+    simulate(sd, 0, t);
+    simulate(sd, 0, clamp_thrust(t+c[i].thrust));
+  }
+  
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score -= landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
   
   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
     score -= landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed);
-    
+  
   if (std::abs(sd.v[1])>maximum_vertical_speed)
     score -= landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed);
   
@@ -281,14 +298,14 @@ int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
     score += W*W-(int64_t)dsqr;
   
   /*
-  vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
-  
-  double d = (double)distance_sqr(sd.p, lz);
-  
-  if (d < W*W) {
-    score += W*W-d;
-  }
-  */
+   vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
+   
+   double d = (double)distance_sqr(sd.p, lz);
+   
+   if (d < W*W) {
+   score += W*W-d;
+   }
+   */
   
   return score < 0 ? 0 : score;
 }
@@ -306,8 +323,14 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int PX=(int)std::round(sd.p[0]); // previous X
   int PY=(int)std::round(sd.p[1]); // previous Y
   int i = 0;
+  int angle = sd.R;
+  int thrust = sd.P;
   for (; i < chromosome_size; ++i) {
-    simulate(sd, c[i].angle, c[i].thrust);
+    angle += c[i].angle;
+    thrust += c[i].thrust;
+    angle = clamp_angle(angle);
+    thrust = clamp_thrust(thrust);
+    simulate(sd, angle, thrust);
     int X = (int)std::round(sd.p[0]);
     int Y = (int)std::round(sd.p[1]);
     int HS = (int)std::round(sd.v[0]);
@@ -328,26 +351,27 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     PX=X;
     PY=Y;
   }
-
-   
+  
+  
   const int landing_error_penalty = 3000;
-   
+  
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
     score += landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
-    } else {
-    c[i-1].angle = 0;
+  } else {
+    c[i-1].angle = -sd_prev2.R;
     c[i].angle = 0;
     sd = sd_prev2;
-    simulate(sd, c[i-1].angle, c[i-1].thrust);
-    simulate(sd, c[i].angle, c[i].thrust);
-    }
+    int t = clamp_thrust(sd_prev2.P + c[i-1].thrust);
+    simulate(sd, 0, t);
+    simulate(sd, 0, clamp_thrust(t+c[i].thrust));
+  }
   
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score += landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
   
   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
     score += landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed);
-    
+  
   if (std::abs(sd.v[1])>maximum_vertical_speed)
     score += landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed);
   
@@ -364,15 +388,15 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   
   int64_t dsqr = (int64_t)distance_sqr(sd.p, lz);
   /*
-  int x0 = landing_zone_x0 + lz_buffer;
-  int x1 = landing_zone_x1 - lz_buffer;
-  float dsqr = 0;
-  if (X < x0) {
-    dsqr = distance_sqr(sd.p, vec2<float>(x0, heights[x0]));
-  } else if (X > x1) {
-    dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
-  }
-  */
+   int x0 = landing_zone_x0 + lz_buffer;
+   int x1 = landing_zone_x1 - lz_buffer;
+   float dsqr = 0;
+   if (X < x0) {
+   dsqr = distance_sqr(sd.p, vec2<float>(x0, heights[x0]));
+   } else if (X > x1) {
+   dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
+   }
+   */
   score += (int64_t)dsqr;
   return score;
 }
@@ -421,14 +445,6 @@ std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& 
 double elitarism_factor = 0.1;
 double mutation_chance = 0.01;
 
-int clamp_angle(int R) {
-  return R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
-}
-
-int clamp_thrust(int P) {
-  return P<0?0:P>maximum_thrust?maximum_thrust:P;
-}
-
 inline double rand_double() {
   return (double)(rkiss.rand64()%100000)/100000.0;
 }
@@ -441,50 +457,20 @@ void make_children(chromosome& child1, chromosome& child2, const chromosome& par
   double r = rand_double();
   double r2 = 1.0-r;
   for (int i = 0; i < chromosome_size; ++i) {
-    gene g1;
-    g1.angle = parent1[i].angle*r+parent2[i].angle*r2;
-    g1.thrust = parent1[i].thrust*r+parent2[i].thrust*r2;
-    gene g2;
-    g2.angle = parent1[i].angle*r2+parent2[i].angle*r;
-    g2.thrust = parent1[i].thrust*r2+parent2[i].thrust*r;
-    
+    gene g1, g2;
     double r3 = rand_double();
-    if (r3 < mutation_chance) {
-      g1.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
-      g1.thrust = rkiss.rand64()%(maximum_thrust+1);
+    if (r3 < mutation_chance)
+      g1 = generate_random_gene();
+    else {
+      g1.angle = (int)std::round(parent1[i].angle*r+parent2[i].angle*r2);
+      g1.thrust = (int)std::round(parent1[i].thrust*r+parent2[i].thrust*r2);
     }
     double r4 = rand_double();
-    if (r4 < mutation_chance) {
-      g2.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
-      g2.thrust = rkiss.rand64()%(maximum_thrust+1);
-    }
-    
-    g1.angle = clamp_angle(g1.angle);
-    g1.thrust = clamp_thrust(g1.thrust);
-    g2.angle = clamp_angle(g2.angle);
-    g2.thrust = clamp_thrust(g2.thrust);
-    
-    if (i > 0) {
-      const auto& pg1 = child1[i-1];
-      const auto& pg2 = child2[i-1];
-      if (g1.angle>pg1.angle+maximum_angle_rotation)
-        g1.angle = pg1.angle+maximum_angle_rotation;
-      if (g1.angle < pg1.angle-maximum_angle_rotation)
-        g1.angle = pg1.angle-maximum_angle_rotation;
-      if (g1.thrust>pg1.thrust+maximum_thrust_change)
-        g1.thrust = pg1.thrust+maximum_thrust_change;
-      if (g1.thrust < pg1.thrust-maximum_thrust_change)
-        g1.thrust = pg1.thrust-maximum_thrust_change;
-      
-      if (g2.angle>pg2.angle+maximum_angle_rotation)
-        g2.angle = pg2.angle+maximum_angle_rotation;
-      if (g2.angle < pg2.angle-maximum_angle_rotation)
-        g2.angle = pg2.angle-maximum_angle_rotation;
-      if (g2.thrust>pg2.thrust+maximum_thrust_change)
-        g2.thrust = pg2.thrust+maximum_thrust_change;
-      if (g2.thrust < pg2.thrust-maximum_thrust_change)
-        g2.thrust = pg2.thrust-maximum_thrust_change;
-      
+    if (r4 < mutation_chance)
+      g2 = generate_random_gene();
+    else {
+      g2.angle = std::round(parent1[i].angle*r2+parent2[i].angle*r);
+      g2.thrust = std::round(parent1[i].thrust*r2+parent2[i].thrust*r);
     }
     
     child1.push_back(g1);

@@ -72,7 +72,7 @@ void init_model(model& m, const std::string& s) {
 }
 
 void make_random_population(model& m) {
-  m.current_population = generate_random_population(simdata.R, simdata.P);
+  m.current_population = generate_random_population();
 }
 
 void make_next_generation(model& m) {

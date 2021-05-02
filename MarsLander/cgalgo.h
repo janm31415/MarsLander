@@ -290,8 +290,9 @@ extern simulation_data simdata;
 extern double elitarism_factor;
 extern double mutation_chance;
 
-chromosome generate_random_chromosome(int init_R, int init_P);
-population generate_random_population(int init_R, int init_P);
+chromosome generate_random_chromosome();
+population generate_random_population();
+gene generate_random_gene();
 
 bool is_a_valid_landing(const simulation_data& sd);
 
