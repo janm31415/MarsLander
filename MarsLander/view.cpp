@@ -129,6 +129,8 @@ _viewport_pos_x(V_X), _viewport_pos_y(V_Y)
   _prepare_render();
   _total_iterations = 0;
   _playing = false;
+  mutation_chance = _settings.mutation_chance;
+  elitarism_factor = _settings.elitarism_factor;
 }
 
 
@@ -633,6 +635,14 @@ void view::_control_window()
   }
   
   ImGui::InputInt("Iterations per view", &_settings.iterations_per_visualization);
+  
+  
+  if (ImGui::InputDouble("Elitarism factor", &_settings.elitarism_factor)) {
+    elitarism_factor = _settings.elitarism_factor;
+  }
+  if (ImGui::InputDouble("Mutation chance", &_settings.mutation_chance)) {
+    mutation_chance = _settings.mutation_chance;
+  }
   
   ImGui::End();
 }

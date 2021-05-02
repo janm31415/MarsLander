@@ -205,8 +205,96 @@ simulation_data run_chromosome(const chromosome& c) {
   return sd;
 }
 
-int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
-  int score = 0;
+int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
+  int64_t score = 0;
+#if defined(GENERATE_PATH)
+  path.clear();
+  path.reserve(chromosome_size);
+#endif
+  simulation_data sd = simdata;
+  simulation_data sd_prev = sd;
+  simulation_data sd_prev2 = sd_prev;
+  bool crashed = false;
+  int PX=(int)std::round(sd.p[0]); // previous X
+  int PY=(int)std::round(sd.p[1]); // previous Y
+  int i = 0;
+  for (; i < chromosome_size; ++i) {
+    simulate(sd, c[i].angle, c[i].thrust);
+    int X = (int)std::round(sd.p[0]);
+    int Y = (int)std::round(sd.p[1]);
+    int HS = (int)std::round(sd.v[0]);
+    int VS = (int)std::round(sd.v[1]);
+#if defined(GENERATE_PATH)
+    path.emplace_back(X,Y);
+#endif
+    crashed = crashed_or_landed(X, Y, PX, PY);
+    if (crashed) {
+#if defined(GENERATE_PATH)
+      while (path.size()<chromosome_size)
+        path.emplace_back(X,Y);
+#endif
+      break;
+    }
+    sd_prev2 = sd_prev;
+    sd_prev = sd;
+    PX=X;
+    PY=Y;
+  }
+  
+  const int landing_error_penalty = 3000;
+  
+  if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
+    score -= landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
+    } else {
+    c[i-1].angle = 0;
+    c[i].angle = 0;
+    sd = sd_prev2;
+    simulate(sd, c[i-1].angle, c[i-1].thrust);
+    simulate(sd, c[i].angle, c[i].thrust);
+    }
+    
+  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+    score -= landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
+  
+  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+    score -= landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed);
+    
+  if (std::abs(sd.v[1])>maximum_vertical_speed)
+    score -= landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed);
+  
+  if (std::abs(sd.v[0])>maximum_horizontal_speed)
+    score -= landing_error_penalty*(std::abs(sd.v[0])-maximum_horizontal_speed);
+  
+  int X = (int)std::round(sd.p[0]);
+  int Y = (int)std::round(sd.p[1]);
+  
+  int x0 = landing_zone_x0 + lz_buffer;
+  int x1 = landing_zone_x1 - lz_buffer;
+  float dsqr = 0;
+  if (X < x0) {
+    dsqr = distance_sqr(sd.p, vec2<float>(x0, heights[x0]));
+  } else if (X > x1) {
+    dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
+  }
+  
+  if ((int64_t)dsqr < W*W)
+    score += W*W-(int64_t)dsqr;
+  
+  /*
+  vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
+  
+  double d = (double)distance_sqr(sd.p, lz);
+  
+  if (d < W*W) {
+    score += W*W-d;
+  }
+  */
+  
+  return score < 0 ? 0 : score;
+}
+
+int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
+  int64_t score = 0;
 #if defined(GENERATE_PATH)
   path.clear();
   path.reserve(chromosome_size);
@@ -274,66 +362,18 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   
   vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
   
-  int d = (int)distance(sd.p, lz);
+  int64_t dsqr = (int64_t)distance_sqr(sd.p, lz);
   /*
-   const int penalty = 1000;
-   
-   int land_params_score = 0;
-   if (std::abs(sd_prev2.R)>maximum_angle_rotation)
-   land_params_score += penalty;
-   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
-   land_params_score += penalty;//(std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
-   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
-   land_params_score += penalty;//(std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
-   
-   if (d>3*penalty) {
-   score = d;
-   } else {
-   double alpha = (double)d/(double)(3*penalty);
-   score = (int)((1.0-alpha)*land_params_score + alpha*d);
-   }
-   
-   score += d*100;
-   //land_paramrs_score
-   */
-  
-  score += d*d;
-  
-  if (score < 0) {
-  
-    std::cout << "NEGATIVE SCORE\n";
-  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
-    std::cout << landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed) << std::endl;
-  
-  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
-    std::cout << landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed) << std::endl;
-    
-  if (std::abs(sd.v[1])>maximum_vertical_speed)
-    std::cout << landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed) << std::endl;
-  
-  if (std::abs(sd.v[0])>maximum_horizontal_speed)
-    std::cout << landing_error_penalty*(std::abs(sd.v[0])-maximum_horizontal_speed) << std::endl;
-  
-  
-  if (Y > heights[X])
-    std::cout << (Y-heights[X])*did_not_reach_solid_ground_multiplier << std::endl;
-  
-  
-  std::cout << d*d << std::endl;
-  std::cout << "-------------------\n";
+  int x0 = landing_zone_x0 + lz_buffer;
+  int x1 = landing_zone_x1 - lz_buffer;
+  float dsqr = 0;
+  if (X < x0) {
+    dsqr = distance_sqr(sd.p, vec2<float>(x0, heights[x0]));
+  } else if (X > x1) {
+    dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
   }
-  
-  /*
-   score += (int)distance(sd.p, lz)*500;
-   
-   if (std::abs(sd_prev2.R)>maximum_angle_rotation)
-   score += score_zero_angle_is_not_possible;
-   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
-   score += (std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
-   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
-   score += (std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
-   score += (simdata.F - sd.F)*fuel_consumption_multiplier;
-   */
+  */
+  score += (int64_t)dsqr;
   return score;
 }
 
@@ -353,10 +393,11 @@ bool is_a_valid_landing(const simulation_data& sd) {
   return true;
 }
 
-std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score) {
-  int M = *std::max_element(score.begin(), score.end());
+std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& score) {
+  int64_t M = *std::max_element(score.begin(), score.end());
   int64_t sum = 0;
   for (auto s : score)
+    //sum += s;
     sum += (int64_t)(M-s);
   std::vector<std::pair<double, int>> temp;
   temp.reserve(score.size());
@@ -377,8 +418,8 @@ std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& scor
   return out;
 }
 
-#define elitarism_factor 0.1
-#define mutation_chance 0.01
+double elitarism_factor = 0.1;
+double mutation_chance = 0.01;
 
 int clamp_angle(int R) {
   return R<-maximum_angle?-maximum_angle:R>maximum_angle?maximum_angle:R;
@@ -388,12 +429,16 @@ int clamp_thrust(int P) {
   return P<0?0:P>maximum_thrust?maximum_thrust:P;
 }
 
+inline double rand_double() {
+  return (double)(rkiss.rand64()%100000)/100000.0;
+}
+
 void make_children(chromosome& child1, chromosome& child2, const chromosome& parent1, const chromosome& parent2) {
   child1.reserve(chromosome_size);
   child2.reserve(chromosome_size);
   child1.clear();
   child2.clear();
-  double r = (double)(rkiss.rand64()%100000)/100000.0;
+  double r = rand_double();
   double r2 = 1.0-r;
   for (int i = 0; i < chromosome_size; ++i) {
     gene g1;
@@ -403,12 +448,12 @@ void make_children(chromosome& child1, chromosome& child2, const chromosome& par
     g2.angle = parent1[i].angle*r2+parent2[i].angle*r;
     g2.thrust = parent1[i].thrust*r2+parent2[i].thrust*r;
     
-    double r3 = (double)(rkiss.rand64()%100000)/100000.0;
+    double r3 = rand_double();
     if (r3 < mutation_chance) {
       g1.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
       g1.thrust = rkiss.rand64()%(maximum_thrust+1);
     }
-    double r4 = (double)(rkiss.rand64()%100000)/100000.0;
+    double r4 = rand_double();
     if (r4 < mutation_chance) {
       g2.angle = rkiss.rand64()%(2*maximum_angle+1)-maximum_angle;
       g2.thrust = rkiss.rand64()%(maximum_thrust+1);
@@ -467,7 +512,7 @@ population make_next_generation(const population& current, const std::vector<dou
   const int children = (current.size() - elitair_chromosomes_to_copy);
   
   for (int i = 0; i < children/2; ++i) {
-    double r = (double)(rkiss.rand64()%100000)/100000.0;
+    double r = rand_double();
     int idx = 0;
     while (score_index[idx].first>r && idx < score_index.size())
       ++idx;
@@ -475,7 +520,7 @@ population make_next_generation(const population& current, const std::vector<dou
     int first_parent_index = score_index[idx].second;
     int second_parent_index = first_parent_index;
     while (second_parent_index == first_parent_index) {
-      r = (double)(rkiss.rand64()%100000)/100000.0;
+      r = rand_double();
       idx = 0;
       while (score_index[idx].first>r && idx < score_index.size())
         ++idx;

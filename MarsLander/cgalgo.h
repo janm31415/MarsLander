@@ -287,6 +287,8 @@ extern std::vector<int> heights;
 extern int landing_zone_x0;
 extern int landing_zone_x1;
 extern simulation_data simdata;
+extern double elitarism_factor;
+extern double mutation_chance;
 
 chromosome generate_random_chromosome(int init_R, int init_P);
 population generate_random_population(int init_R, int init_P);
@@ -307,12 +309,12 @@ simulation_data run_chromosome(const chromosome& c);
  Returns a score. Larger score is bad.
  Also computes the path that is followed as an aux tool for rendering.
  */
-int evaluate(std::vector<vec2<float>>& path, chromosome& c);
+int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c);
 
 /*
  Converts the scores to a normalized score between 0 and 1.
  The scores are inverted, meaning that now a larger value is better than a smaller value.
  */
-std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score);
+std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& score);
 
 population make_next_generation(const population& current, const std::vector<double>& score);

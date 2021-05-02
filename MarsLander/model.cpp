@@ -151,7 +151,7 @@ void fill_renderer_with_simulation(model& m) {
 }
 
 void simulate_population(model& m) {
-  std::vector<int> scores;
+  std::vector<int64_t> scores;
   scores.reserve(m.current_population.size());
   for (int i = 0; i < m.current_population.size(); ++i) {
     std::vector<vec2<float>> path;

@@ -10,6 +10,8 @@ struct settings
   bool controls;
   bool fullscreen;
   int iterations_per_visualization;
+  double elitarism_factor;
+  double mutation_chance;
   };
 
 settings read_settings(const char* filename);
