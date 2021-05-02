@@ -616,7 +616,7 @@ void view::_control_window()
     _run_simulations(100);
     _print_best_run_results();
     _playing = false;
-    simulate_population(_m);
+    _prepare_render();
   }
   if (ImGui::Button("Next+1000")) {
     _run_simulations(1000);

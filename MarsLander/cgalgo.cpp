@@ -215,7 +215,7 @@ simulation_data run_chromosome(const chromosome& c) {
   return sd;
 }
 
-int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
+int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int64_t score = 0;
 #if defined(GENERATE_PATH)
   path.clear();
@@ -310,7 +310,7 @@ int64_t evaluate_newer(std::vector<vec2<float>>& path, chromosome& c) {
   return score < 0 ? 0 : score;
 }
 
-int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
+int64_t evaluate_old(std::vector<vec2<float>>& path, chromosome& c) {
   int64_t score = 0;
 #if defined(GENERATE_PATH)
   path.clear();
@@ -356,14 +356,16 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   const int landing_error_penalty = 3000;
   
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
-    score += landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
-  } else {
+    score -= landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
+  } else if (i>0) {
     c[i-1].angle = -sd_prev2.R;
     c[i].angle = 0;
     sd = sd_prev2;
     int t = clamp_thrust(sd_prev2.P + c[i-1].thrust);
     simulate(sd, 0, t);
     simulate(sd, 0, clamp_thrust(t+c[i].thrust));
+  } else if (i==0) {
+    c[i].angle = 0;
   }
   
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
@@ -418,15 +420,16 @@ bool is_a_valid_landing(const simulation_data& sd) {
 }
 
 std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& score) {
-  int64_t M = *std::max_element(score.begin(), score.end());
+  //int64_t M = *std::max_element(score.begin(), score.end());
   int64_t sum = 0;
   for (auto s : score)
-    //sum += s;
-    sum += (int64_t)(M-s);
+    sum += s;
+    //sum += (int64_t)(M-s);
   std::vector<std::pair<double, int>> temp;
   temp.reserve(score.size());
   for (int i = 0; i < score.size(); ++i) {
-    double new_score = (double)(M-score[i])/(double)sum;
+    //double new_score = (double)(M-score[i])/(double)sum;
+    double new_score = (double)(score[i])/(double)sum;
     temp.emplace_back(new_score, i);
   }
   std::sort(temp.begin(), temp.end(), [](const auto& left, const auto& right) { return left.first > right.first;});

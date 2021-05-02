@@ -10,7 +10,7 @@ settings read_settings(const char* filename)
   s.log_window = true; 
   s.script_window = true;
   s.controls = true;
-  s.iterations_per_visualization = 50;
+  s.iterations_per_visualization = 1;
   s.elitarism_factor = 0.1;
   s.mutation_chance = 0.01;
   pref_file f(filename, pref_file::READ);
