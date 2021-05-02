@@ -316,6 +316,6 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c);
  Converts the scores to a normalized score between 0 and 1.
  The scores are inverted, meaning that now a larger value is better than a smaller value.
  */
-std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& score);
+void normalize_scores_roulette_wheel(std::vector<double>& out, const std::vector<int64_t>& score);
 
-population make_next_generation(const population& current, const std::vector<double>& score);
+void make_next_generation(population& next, const population& current, const std::vector<double>& score);

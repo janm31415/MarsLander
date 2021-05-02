@@ -419,21 +419,21 @@ bool is_a_valid_landing(const simulation_data& sd) {
   return true;
 }
 
-std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& score) {
+void normalize_scores_roulette_wheel(std::vector<double>& out, const std::vector<int64_t>& score) {
   //int64_t M = *std::max_element(score.begin(), score.end());
   int64_t sum = 0;
   for (auto s : score)
     sum += s;
     //sum += (int64_t)(M-s);
-  std::vector<std::pair<double, int>> temp;
-  temp.reserve(score.size());
+  static std::vector<std::pair<double, int>> temp(score.size());
   for (int i = 0; i < score.size(); ++i) {
     //double new_score = (double)(M-score[i])/(double)sum;
     double new_score = (double)(score[i])/(double)sum;
-    temp.emplace_back(new_score, i);
+    temp[i] = std::pair<double, int>(new_score, i);
   }
   std::sort(temp.begin(), temp.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
-  std::vector<double> out(score.size(), 0.0);
+  if (out.size() != score.size())
+    out.resize(score.size());
   
   double accumulated_score=0.0;
   
@@ -442,7 +442,6 @@ std::vector<double> normalize_scores_roulette_wheel(const std::vector<int64_t>& 
     out[temp[i].second] = accumulated_score;
   }
   
-  return out;
 }
 
 double elitarism_factor = 0.1;
@@ -453,10 +452,10 @@ inline double rand_double() {
 }
 
 void make_children(chromosome& child1, chromosome& child2, const chromosome& parent1, const chromosome& parent2) {
-  child1.reserve(chromosome_size);
-  child2.reserve(chromosome_size);
-  child1.clear();
-  child2.clear();
+  if (child1.size() != chromosome_size)
+    child1.resize(chromosome_size);
+  if (child2.size() != chromosome_size)
+    child2.resize(chromosome_size);
   double r = rand_double();
   double r2 = 1.0-r;
   for (int i = 0; i < chromosome_size; ++i) {
@@ -476,26 +475,27 @@ void make_children(chromosome& child1, chromosome& child2, const chromosome& par
       g2.thrust = std::round(parent1[i].thrust*r2+parent2[i].thrust*r);
     }
     
-    child1.push_back(g1);
-    child2.push_back(g2);
+    child1[i] = g1;
+    child2[i] = g2;
     
   }
 }
 
-population make_next_generation(const population& current, const std::vector<double>& score) {
-  population new_pop;
-  new_pop.reserve(current.size());
-  std::vector<std::pair<double, int>> score_index;
-  score_index.reserve(score.size());
+void make_next_generation(population& new_pop, const population& current, const std::vector<double>& score) {
+  if (new_pop.size() != current.size())
+    new_pop.resize(current.size());
+  static std::vector<std::pair<double, int>> score_index;
+  if (score_index.size() != score.size())
+    score_index.resize(score.size());
   for (int i = 0; i < score.size(); ++i)
-  score_index.emplace_back(score[i], i);
+    score_index[i] = std::pair<double, int>(score[i], i);
   std::sort(score_index.begin(), score_index.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
   int elitair_chromosomes_to_copy = (int)(score.size()*elitarism_factor);
   if ((score.size()-elitair_chromosomes_to_copy)%2)
     ++elitair_chromosomes_to_copy;
   
   for (int i=0; i < elitair_chromosomes_to_copy; ++i) {
-    new_pop.push_back(current[score_index[i].second]);
+    new_pop[i] = current[score_index[i].second];
   }
   
   const int children = (current.size() - elitair_chromosomes_to_copy);
@@ -516,11 +516,7 @@ population make_next_generation(const population& current, const std::vector<dou
       --idx;
       second_parent_index = score_index[idx].second;
     }
-    chromosome c1, c2;
-    make_children(c1, c2, current[first_parent_index], current[second_parent_index]);
-    new_pop.push_back(c1);
-    new_pop.push_back(c2);
+    make_children(new_pop[2*i+elitair_chromosomes_to_copy], new_pop[2*i+1+elitair_chromosomes_to_copy], current[first_parent_index], current[second_parent_index]);
   }
-  
-  return new_pop;
+
 }

@@ -76,7 +76,8 @@ void make_random_population(model& m) {
 }
 
 void make_next_generation(model& m) {
-  m.current_population = make_next_generation(m.current_population, m.current_population_normalized_score);
+  make_next_generation(m.next_population, m.current_population, m.current_population_normalized_score);
+  std::swap(m.current_population, m.next_population);
 }
 
 void fill_terrain_data(model& m)
@@ -157,7 +158,7 @@ void simulate_population(model& m) {
     std::vector<vec2<float>> path;
     scores.push_back(evaluate(path, m.current_population[i]));
   }
-  m.current_population_normalized_score = normalize_scores_roulette_wheel(scores);
+  normalize_scores_roulette_wheel(m.current_population_normalized_score, scores);
 }
 
 simulation_data get_best_run_results(const model& m) {

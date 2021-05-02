@@ -19,7 +19,7 @@ struct model
   
   int number_of_terrain_points;
   
-  population current_population;
+  population current_population, next_population;
   std::vector<double> current_population_normalized_score;
 
   vertex_array_object* _vao;
