@@ -337,6 +337,22 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   return score;
 }
 
+bool is_a_valid_landing(const simulation_data& sd) {
+  if (sd.R != 0)
+    return false;
+  if (sd.p[0] < landing_zone_x0)
+    return false;
+  if (sd.p[0] > landing_zone_x1)
+    return false;
+  if (abs(sd.v[0])>maximum_horizontal_speed)
+    return false;
+  if (abs(sd.v[1])>maximum_vertical_speed)
+    return false;
+  if (sd.p[1]>heights[landing_zone_x0])
+    return false;
+  return true;
+}
+
 std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score) {
   int M = *std::max_element(score.begin(), score.end());
   int64_t sum = 0;

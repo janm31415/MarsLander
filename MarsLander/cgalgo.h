@@ -291,6 +291,8 @@ extern simulation_data simdata;
 chromosome generate_random_chromosome(int init_R, int init_P);
 population generate_random_population(int init_R, int init_P);
 
+bool is_a_valid_landing(const simulation_data& sd);
+
 /*
  This method fills surface_points with the terrain,
  generates heights, which for each pixel x provides the height h,

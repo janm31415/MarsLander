@@ -37,6 +37,7 @@ class view
     void _destroy_blit_gl_objects();
     void _prepare_render();
     void _print_best_run_results();
+    void _run_simulations(int nr);
 
   private:
     SDL_Window* _window;    
@@ -52,4 +53,6 @@ class view
     mouse_data _md;
     model _m;
     std::string _script;
+    bool _playing;
+    int _total_iterations;
   };

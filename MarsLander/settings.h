@@ -9,6 +9,7 @@ struct settings
   bool script_window;
   bool controls;
   bool fullscreen;
+  int iterations_per_visualization;
   };
 
 settings read_settings(const char* filename);

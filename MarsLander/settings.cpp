@@ -10,12 +10,14 @@ settings read_settings(const char* filename)
   s.log_window = true; 
   s.script_window = true;
   s.controls = true;
+  s.iterations_per_visualization = 10;
   pref_file f(filename, pref_file::READ);
   f["file_open_folder"] >> s.file_open_folder;
   f["log_window"] >> s.log_window;
   f["script_window"] >> s.script_window;
   f["controls"] >> s.controls;
   f["fullscreen"] >> s.fullscreen;
+  f["iterations_per_visualization"] >> s.iterations_per_visualization;
   return s;
   }
 
@@ -26,5 +28,6 @@ void write_settings(const settings& s, const char* filename)
   f << "script_window" << s.script_window;
   f << "controls" << s.controls;
   f << "fullscreen" << s.fullscreen;
+  f << "iterations_per_visualization" << s.iterations_per_visualization;
   f.release();
   }
