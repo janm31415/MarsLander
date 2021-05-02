@@ -112,14 +112,12 @@ void fill_terrain_data(model& m)
   gl_check_error("m._vbo_array->release()");
 }
 
-void simulate_population(model& m) {
+void fill_renderer_with_simulation(model& m) {
   m._path_vao.clear();
   m._path_vbo_array.clear();
-  std::vector<int> scores;
-  scores.reserve(m.current_population.size());
   for (int i = 0; i < m.current_population.size(); ++i) {
     std::vector<vec2<float>> path;
-    scores.push_back(evaluate(path, m.current_population[i]));
+    evaluate(path, m.current_population[i]);
     std::vector<GLfloat> vertices;
     vertices.reserve(path.size() * 2);
     for (uint64_t i = 0; i < path.size(); ++i)
@@ -147,8 +145,29 @@ void simulate_population(model& m) {
     m._path_vbo_array.back()->release();
     gl_check_error("m._path_vbo_array.back()->release()");
   }
-  m.current_population_normalized_score = normalize_scores_roulette_wheel(scores);
-  for (auto s : m.current_population_normalized_score) {
-    Logging::Info() << "score " << s << "\n";
+  //for (auto s : m.current_population_normalized_score) {
+  //  Logging::Info() << "score " << s << "\n";
+  //}
+}
+
+void simulate_population(model& m) {
+  std::vector<int> scores;
+  scores.reserve(m.current_population.size());
+  for (int i = 0; i < m.current_population.size(); ++i) {
+    std::vector<vec2<float>> path;
+    scores.push_back(evaluate(path, m.current_population[i]));
   }
+  m.current_population_normalized_score = normalize_scores_roulette_wheel(scores);
+}
+
+simulation_data get_best_run_results(const model& m) {
+  int besti = 0;
+  double score = 0.0;
+  for (int i = 0; i < m.current_population_normalized_score.size(); ++i) {
+    if (m.current_population_normalized_score[i]>score) {
+      score = m.current_population_normalized_score[i];
+      besti = i;
+    }
+  }
+  return run_chromosome(m.current_population[besti]);
 }

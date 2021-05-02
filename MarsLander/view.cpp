@@ -125,6 +125,7 @@ _viewport_pos_x(V_X), _viewport_pos_y(V_Y)
 
   init_model(_m, _script);
   make_random_population(_m);
+  simulate_population(_m);
   _prepare_render();
   }
 
@@ -542,7 +543,19 @@ void view::_prepare_render()
   {
   _m.delete_render_objects();
   fill_terrain_data(_m);
-  simulate_population(_m);
+  fill_renderer_with_simulation(_m);
+  }
+  
+void view::_print_best_run_results(){
+  auto sd = get_best_run_results(_m);
+  Logging::Info() << "Current best result:\n";
+  Logging::Info() << "  X: " << (int)std::round(sd.p.x) << "\n";
+  Logging::Info() << "  Y: " << (int)std::round(sd.p.y) << "\n";
+  Logging::Info() << " HS: " << (int)std::round(sd.v.x) << "\n";
+  Logging::Info() << " VS: " << (int)std::round(sd.v.y) << "\n";
+  Logging::Info() << "  R: " << sd.R << "\n";
+  Logging::Info() << "  P: " << sd.P << "\n";
+  Logging::Info() << "  F: " << sd.F << "\n";
   }
 
 void view::_control_window()
@@ -567,25 +580,40 @@ void view::_control_window()
   if (ImGui::Button("Start")) {
     init_model(_m, _script);
     make_random_population(_m);
+    simulate_population(_m);
+    _print_best_run_results();
     _prepare_render();
   }
   if (ImGui::Button("Next")) {
     make_next_generation(_m);
+    simulate_population(_m);
+    _print_best_run_results();
     _prepare_render();
   }
   if (ImGui::Button("Next+10")) {
     for (int i = 0; i < 10; ++i) {
       make_next_generation(_m);
-      _prepare_render();
+      simulate_population(_m);
       }
+    _print_best_run_results();
+    _prepare_render();
   }
   if (ImGui::Button("Next+100")) {
     for (int i = 0; i < 100; ++i) {
       make_next_generation(_m);
-      _prepare_render();
+      simulate_population(_m);
       }
+    _print_best_run_results();
+    simulate_population(_m);
   }
-
+  if (ImGui::Button("Next+1000")) {
+    for (int i = 0; i < 1000; ++i) {
+      make_next_generation(_m);
+      simulate_population(_m);
+      }
+    _print_best_run_results();      
+    _prepare_render();
+  }
   ImGui::End();
   }
 
@@ -646,6 +674,7 @@ void view::loop()
     gl_check_error("_m._vao->release()");
     
     int best_index = 0;
+    double best_score = 0.0;
     for (int i = 0; i <= _m._path_vao.size(); ++i) {
       bool last_draw = false;
       if (i == _m._path_vao.size()) {
@@ -665,12 +694,14 @@ void view::loop()
       _program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2); // x y
       gl_check_error("_program->set_attribute_buffer(0, GL_FLOAT, 0, 2, sizeof(GLfloat) * 2)");
       double s = _m.current_population_normalized_score[i];
-      if (s<1.0)
-        _program->set_uniform_value("iColor", (GLfloat)s, (GLfloat)s, (GLfloat)1, (GLfloat)1);
-      else {
-        _program->set_uniform_value("iColor", (GLfloat)0, (GLfloat)1, (GLfloat)0, (GLfloat)1);
+      if (s>best_score) {
+        best_score = s;
         best_index = i;
-        }
+      }
+      if (last_draw)
+        _program->set_uniform_value("iColor", (GLfloat)0, (GLfloat)1, (GLfloat)0, (GLfloat)1);
+      else
+        _program->set_uniform_value("iColor", (GLfloat)s*0.75, (GLfloat)s*0.75, (GLfloat)0.75, (GLfloat)1);
       
       glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)(_m.current_population.front().size()));
       gl_check_error("glDrawArrays");

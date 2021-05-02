@@ -36,6 +36,7 @@ class view
     void _destroy_gl_objects();
     void _destroy_blit_gl_objects();
     void _prepare_render();
+    void _print_best_run_results();
 
   private:
     SDL_Window* _window;    

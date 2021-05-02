@@ -156,58 +156,160 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
   simdata.P = P;
 }
 
+bool crashed_or_landed(int X, int Y, int PX, int PY) {
+  if (X==PX)
+    return Y<=heights[X];
+  if (X>PX) {
+    std::swap(X,PX);
+    std::swap(Y,PY);
+  }
+  for (int x = X; x <= PX; ++x) {
+    double alpha = (double)(x-X)/(double)(PX-X);
+    double y = Y+alpha*(PY-Y);
+    if ((int)std::round(y) <= heights[x])
+      return true;
+  }
+  return false;
+}
+
 #define score_zero_angle_is_not_possible 500
-#define large_speed_penalty 100
+#define large_speed_penalty 500
 #define fuel_consumption_multiplier 10
 #define did_not_reach_solid_ground_multiplier 5
 #define lz_buffer 5
 
-int evaluate(std::vector<vec2<float>>& path, const chromosome& c) {
-  int score = 0;
-  path.clear();
-  path.reserve(chromosome_size);
+#define GENERATE_PATH
+
+simulation_data run_chromosome(const chromosome& c) {
   simulation_data sd = simdata;
-  simulation_data sd_prev = sd;
-  simulation_data sd_prev2 = sd_prev;
-  for (int i = 0; i < chromosome_size; ++i) {
+  bool crashed = false;
+  int PX=(int)std::round(sd.p[0]); // previous X
+  int PY=(int)std::round(sd.p[1]); // previous Y
+  int i = 0;
+  for (; i < chromosome_size; ++i) {
     simulate(sd, c[i].angle, c[i].thrust);
     int X = (int)std::round(sd.p[0]);
     int Y = (int)std::round(sd.p[1]);
     int HS = (int)std::round(sd.v[0]);
     int VS = (int)std::round(sd.v[1]);
+    crashed = crashed_or_landed(X, Y, PX, PY);
+    if (crashed) {
+      break;
+    }
+    PX=X;
+    PY=Y;
+  }
+  return sd;
+}
+
+int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
+  int score = 0;
+#if defined(GENERATE_PATH)
+  path.clear();
+  path.reserve(chromosome_size);
+#endif
+  simulation_data sd = simdata;
+  simulation_data sd_prev = sd;
+  simulation_data sd_prev2 = sd_prev;
+  bool crashed = false;
+  int PX=(int)std::round(sd.p[0]); // previous X
+  int PY=(int)std::round(sd.p[1]); // previous Y
+  int i = 0;
+  for (; i < chromosome_size; ++i) {
+    simulate(sd, c[i].angle, c[i].thrust);
+    int X = (int)std::round(sd.p[0]);
+    int Y = (int)std::round(sd.p[1]);
+    int HS = (int)std::round(sd.v[0]);
+    int VS = (int)std::round(sd.v[1]);
+#if defined(GENERATE_PATH)
     path.emplace_back(X,Y);
-    if (Y<=heights[X]) {
+#endif
+    crashed = crashed_or_landed(X, Y, PX, PY);
+    if (crashed) {
+#if defined(GENERATE_PATH)
       while (path.size()<chromosome_size)
         path.emplace_back(X,Y);
+#endif
       break;
     }
     sd_prev2 = sd_prev;
     sd_prev = sd;
+    PX=X;
+    PY=Y;
   }
+  /*
+   if (X < landing_zone_x0+lz_buffer) {
+   lz = vec2<float>(landing_zone_x0+lz_buffer, heights[landing_zone_x0]);
+   } else if (X > landing_zone_x1-lz_buffer) {
+   lz = vec2<float>(landing_zone_x1-lz_buffer, heights[landing_zone_x0]);
+   } else {
+   lz = vec2<float>(X, heights[X]);
+   }
+   */
+   
+  const int landing_error_penalty = 3000;
+   
+  if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
+    score += landing_error_penalty;
+    } else {
+    c[i-1].angle = 0;
+    c[i].angle = 0;
+    sd = sd_prev2;
+    simulate(sd, c[i-1].angle, c[i-1].thrust);
+    simulate(sd, c[i].angle, c[i].thrust);
+    }
+  
+  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+    score += landing_error_penalty;
+  
+  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+    score += landing_error_penalty;
+    
+  
   int X = (int)std::round(sd.p[0]);
   int Y = (int)std::round(sd.p[1]);
+  
   if (Y > heights[X])
     score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
   
-  vec2<float> lz;
+  vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
   
-  if (X < landing_zone_x0+lz_buffer) {
-    lz = vec2<float>(landing_zone_x0+lz_buffer, heights[landing_zone_x0]);
-  } else if (X > landing_zone_x1-lz_buffer) {
-    lz = vec2<float>(landing_zone_x1-lz_buffer, heights[landing_zone_x0]);
-  } else {
-    lz = vec2<float>(X, heights[X]);
-  }
+  int d = (int)distance(sd.p, lz);
+  /*
+   const int penalty = 1000;
+   
+   int land_params_score = 0;
+   if (std::abs(sd_prev2.R)>maximum_angle_rotation)
+   land_params_score += penalty;
+   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+   land_params_score += penalty;//(std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
+   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+   land_params_score += penalty;//(std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
+   
+   if (d>3*penalty) {
+   score = d;
+   } else {
+   double alpha = (double)d/(double)(3*penalty);
+   score = (int)((1.0-alpha)*land_params_score + alpha*d);
+   }
+   
+   score += d*100;
+   //land_paramrs_score
+   */
   
-  score += (int)distance(sd.p, lz)*500;
+  score += d;
   
-  if (std::abs(sd_prev2.R)>maximum_angle_rotation)
-    score += score_zero_angle_is_not_possible;
-  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
-    score += (std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
-  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
-    score += (std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
-  score += (simdata.F - sd.F)*fuel_consumption_multiplier;
+  /*
+   score += (int)distance(sd.p, lz)*500;
+   
+   if (std::abs(sd_prev2.R)>maximum_angle_rotation)
+   score += score_zero_angle_is_not_possible;
+   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+   score += (std::abs(sd_prev.v[0])-maximum_horizontal_speed)*large_speed_penalty;
+   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+   score += (std::abs(sd_prev.v[1])-maximum_vertical_speed)*large_speed_penalty;
+   score += (simdata.F - sd.F)*fuel_consumption_multiplier;
+   */
   return score;
 }
 
@@ -225,10 +327,11 @@ std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& scor
   std::sort(temp.begin(), temp.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
   std::vector<double> out(score.size(), 0.0);
   
-  for (int i = 0; i < temp.size(); ++i) {
-    for (int j = i; j < temp.size(); ++j) {
-      out[temp[i].second] += temp[j].first;
-    }
+  double accumulated_score=0.0;
+  
+  for (int i = temp.size()-1; i>=0; --i) {
+    accumulated_score += temp[i].first;
+    out[temp[i].second] = accumulated_score;
   }
   
   return out;
@@ -287,7 +390,7 @@ void make_children(chromosome& child1, chromosome& child2, const chromosome& par
         g1.thrust = pg1.thrust+maximum_thrust_change;
       if (g1.thrust < pg1.thrust-maximum_thrust_change)
         g1.thrust = pg1.thrust-maximum_thrust_change;
-        
+      
       if (g2.angle>pg2.angle+maximum_angle_rotation)
         g2.angle = pg2.angle+maximum_angle_rotation;
       if (g2.angle < pg2.angle-maximum_angle_rotation)
@@ -296,9 +399,9 @@ void make_children(chromosome& child1, chromosome& child2, const chromosome& par
         g2.thrust = pg2.thrust+maximum_thrust_change;
       if (g2.thrust < pg2.thrust-maximum_thrust_change)
         g2.thrust = pg2.thrust-maximum_thrust_change;
-              
+      
     }
-  
+    
     child1.push_back(g1);
     child2.push_back(g2);
     
@@ -344,6 +447,6 @@ population make_next_generation(const population& current, const std::vector<dou
     new_pop.push_back(c1);
     new_pop.push_back(c2);
   }
-    
+  
   return new_pop;
 }

@@ -299,11 +299,13 @@ population generate_random_population(int init_R, int init_P);
  */
 void read_input(std::stringstream& strcin, std::stringstream& strerr);
 
+simulation_data run_chromosome(const chromosome& c);
+
 /*
  Returns a score. Larger score is bad.
  Also computes the path that is followed as an aux tool for rendering.
  */
-int evaluate(std::vector<vec2<float>>& path, const chromosome& c);
+int evaluate(std::vector<vec2<float>>& path, chromosome& c);
 
 /*
  Converts the scores to a normalized score between 0 and 1.
