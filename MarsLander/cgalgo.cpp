@@ -9,6 +9,9 @@
 
 #include "cgalgo.h"
 
+template <class T>
+inline T sqr(T a) { return a*a; }
+
 std::vector<vec2<int>> surface_points;
 std::vector<int> heights;
 RKISS rkiss;
@@ -237,20 +240,12 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     PX=X;
     PY=Y;
   }
-  /*
-   if (X < landing_zone_x0+lz_buffer) {
-   lz = vec2<float>(landing_zone_x0+lz_buffer, heights[landing_zone_x0]);
-   } else if (X > landing_zone_x1-lz_buffer) {
-   lz = vec2<float>(landing_zone_x1-lz_buffer, heights[landing_zone_x0]);
-   } else {
-   lz = vec2<float>(X, heights[X]);
-   }
-   */
+
    
   const int landing_error_penalty = 3000;
    
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
-    score += landing_error_penalty;
+    score += landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
     } else {
     c[i-1].angle = 0;
     c[i].angle = 0;
@@ -260,11 +255,16 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     }
   
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
-    score += landing_error_penalty;
+    score += landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
   
   if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
-    score += landing_error_penalty;
+    score += landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed);
     
+  if (std::abs(sd.v[1])>maximum_vertical_speed)
+    score += landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed);
+  
+  if (std::abs(sd.v[0])>maximum_horizontal_speed)
+    score += landing_error_penalty*(std::abs(sd.v[0])-maximum_horizontal_speed);
   
   int X = (int)std::round(sd.p[0]);
   int Y = (int)std::round(sd.p[1]);
@@ -297,7 +297,31 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
    //land_paramrs_score
    */
   
-  score += d;
+  score += d*d;
+  
+  if (score < 0) {
+  
+    std::cout << "NEGATIVE SCORE\n";
+  if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
+    std::cout << landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed) << std::endl;
+  
+  if (std::abs(sd_prev.v[0])>maximum_horizontal_speed)
+    std::cout << landing_error_penalty*(std::abs(sd_prev.v[0])-maximum_horizontal_speed) << std::endl;
+    
+  if (std::abs(sd.v[1])>maximum_vertical_speed)
+    std::cout << landing_error_penalty*(std::abs(sd.v[1])-maximum_vertical_speed) << std::endl;
+  
+  if (std::abs(sd.v[0])>maximum_horizontal_speed)
+    std::cout << landing_error_penalty*(std::abs(sd.v[0])-maximum_horizontal_speed) << std::endl;
+  
+  
+  if (Y > heights[X])
+    std::cout << (Y-heights[X])*did_not_reach_solid_ground_multiplier << std::endl;
+  
+  
+  std::cout << d*d << std::endl;
+  std::cout << "-------------------\n";
+  }
   
   /*
    score += (int)distance(sd.p, lz)*500;
@@ -315,9 +339,9 @@ int evaluate(std::vector<vec2<float>>& path, chromosome& c) {
 
 std::vector<double> normalize_scores_roulette_wheel(const std::vector<int>& score) {
   int M = *std::max_element(score.begin(), score.end());
-  int sum = 0;
+  int64_t sum = 0;
   for (auto s : score)
-    sum += (M-s);
+    sum += (int64_t)(M-s);
   std::vector<std::pair<double, int>> temp;
   temp.reserve(score.size());
   for (int i = 0; i < score.size(); ++i) {
