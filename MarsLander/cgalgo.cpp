@@ -215,6 +215,10 @@ simulation_data run_chromosome(const chromosome& c) {
   return sd;
 }
 
+#define EVALUATION_A
+
+#if defined(EVALUATION_A)
+
 int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int64_t score = 0;
 #if defined(GENERATE_PATH)
@@ -261,14 +265,18 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
     score -= landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
-  } else {
+  } else if (i>0) {
     c[i-1].angle = -sd_prev2.R;
     c[i].angle = 0;
     sd = sd_prev2;
     int t = clamp_thrust(sd_prev2.P + c[i-1].thrust);
     simulate(sd, 0, t);
     simulate(sd, 0, clamp_thrust(t+c[i].thrust));
+  } else if (i==0) {
+    c[i].angle = 0;
   }
+  
+  score += sd.F;
   
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score -= landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
@@ -310,7 +318,9 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   return score < 0 ? 0 : score;
 }
 
-int64_t evaluate_old(std::vector<vec2<float>>& path, chromosome& c) {
+#elif defined(EVALUATION_B)
+
+int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int64_t score = 0;
 #if defined(GENERATE_PATH)
   path.clear();
@@ -368,6 +378,8 @@ int64_t evaluate_old(std::vector<vec2<float>>& path, chromosome& c) {
     c[i].angle = 0;
   }
   
+  score += (simdata.F-sd.F)*100;
+  
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score += landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
   
@@ -403,6 +415,8 @@ int64_t evaluate_old(std::vector<vec2<float>>& path, chromosome& c) {
   return score;
 }
 
+#endif
+
 bool is_a_valid_landing(const simulation_data& sd) {
   if (sd.R != 0)
     return false;
@@ -420,15 +434,23 @@ bool is_a_valid_landing(const simulation_data& sd) {
 }
 
 void normalize_scores_roulette_wheel(std::vector<double>& out, const std::vector<int64_t>& score) {
-  //int64_t M = *std::max_element(score.begin(), score.end());
+#if defined(EVALUATION_B)
+  int64_t M = *std::max_element(score.begin(), score.end());
+#endif
   int64_t sum = 0;
   for (auto s : score)
+#if defined(EVALUATION_A)
     sum += s;
-    //sum += (int64_t)(M-s);
+#elif defined(EVALUATION_B)
+    sum += (int64_t)(M-s);
+#endif
   static std::vector<std::pair<double, int>> temp(score.size());
   for (int i = 0; i < score.size(); ++i) {
-    //double new_score = (double)(M-score[i])/(double)sum;
+#if defined(EVALUATION_A)
     double new_score = (double)(score[i])/(double)sum;
+#elif defined(EVALUATION_B)
+    double new_score = (double)(M-score[i])/(double)sum;
+#endif
     temp[i] = std::pair<double, int>(new_score, i);
   }
   std::sort(temp.begin(), temp.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
