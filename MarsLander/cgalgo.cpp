@@ -183,12 +183,13 @@ bool crashed_or_landed(int X, int Y, int PX, int PY) {
 #define large_speed_penalty 500
 #define fuel_consumption_multiplier 10
 #define did_not_reach_solid_ground_multiplier 5
-#define lz_buffer 5
+#define lz_buffer 50
 
 #define GENERATE_PATH
 
-simulation_data run_chromosome(const chromosome& c) {
-  simulation_data sd = simdata;
+void run_chromosome(simulation_data& sd, simulation_data& prev_sd, const chromosome& c) {
+  sd = simdata;
+  prev_sd = simdata;
   bool crashed = false;
   int PX=(int)std::round(sd.p[0]); // previous X
   int PY=(int)std::round(sd.p[1]); // previous Y
@@ -211,8 +212,8 @@ simulation_data run_chromosome(const chromosome& c) {
     }
     PX=X;
     PY=Y;
+    prev_sd = sd;
   }
-  return sd;
 }
 
 #define EVALUATION_A
@@ -276,8 +277,6 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     c[i].angle = 0;
   }
   
-  score += sd.F;
-  
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score -= landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
   
@@ -302,18 +301,11 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
   }
   
+  if (dsqr < 100*100)
+    score += sd.F;
+    
   if ((int64_t)dsqr < W*W)
     score += W*W-(int64_t)dsqr;
-  
-  /*
-   vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
-   
-   double d = (double)distance_sqr(sd.p, lz);
-   
-   if (d < W*W) {
-   score += W*W-d;
-   }
-   */
   
   return score < 0 ? 0 : score;
 }
@@ -417,7 +409,7 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
 
 #endif
 
-bool is_a_valid_landing(const simulation_data& sd) {
+bool is_a_valid_landing(const simulation_data& sd, const simulation_data& prev_sd) {
   if (sd.R != 0)
     return false;
   if (sd.p[0] < landing_zone_x0)
@@ -427,6 +419,8 @@ bool is_a_valid_landing(const simulation_data& sd) {
   if (abs(sd.v[0])>maximum_horizontal_speed)
     return false;
   if (abs(sd.v[1])>maximum_vertical_speed)
+    return false;
+  if (prev_sd.p[1] <= heights[landing_zone_x0])
     return false;
   if (sd.p[1]>heights[landing_zone_x0])
     return false;

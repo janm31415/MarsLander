@@ -557,7 +557,8 @@ void view::_prepare_render()
 }
 
 void view::_print_best_run_results(){
-  auto sd = get_best_run_results(_m);
+  simulation_data sd, prev_sd;
+  get_best_run_results(sd, prev_sd, _m);
   Logging::Info() << "Current best result after " << _total_iterations << " iterations:\n";
   Logging::Info() << "  X: " << (int)std::round(sd.p.x) << "\n";
   Logging::Info() << "  Y: " << (int)std::round(sd.p.y) << "\n";
@@ -566,7 +567,7 @@ void view::_print_best_run_results(){
   Logging::Info() << "  R: " << sd.R << "\n";
   Logging::Info() << "  P: " << sd.P << "\n";
   Logging::Info() << "  F: " << sd.F << "\n";
-  if (is_a_valid_landing(sd)) {
+  if (is_a_valid_landing(sd, prev_sd)) {
     _playing = false;
     Logging::Warning() << "!!!VALID LANDING!!!\n";
   }

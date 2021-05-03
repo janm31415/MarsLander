@@ -161,7 +161,7 @@ void simulate_population(model& m) {
   normalize_scores_roulette_wheel(m.current_population_normalized_score, scores);
 }
 
-simulation_data get_best_run_results(const model& m) {
+void get_best_run_results(simulation_data& sd, simulation_data& prev_sd, const model& m) {
   int besti = 0;
   double score = 0.0;
   for (int i = 0; i < m.current_population_normalized_score.size(); ++i) {
@@ -170,5 +170,5 @@ simulation_data get_best_run_results(const model& m) {
       besti = i;
     }
   }
-  return run_chromosome(m.current_population[besti]);
+  run_chromosome(sd, prev_sd, m.current_population[besti]);
 }

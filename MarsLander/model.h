@@ -42,5 +42,5 @@ void fill_terrain_data(model& m);
 
 void simulate_population(model& m);
 
-simulation_data get_best_run_results(const model& m);
+void get_best_run_results(simulation_data& sd, simulation_data& prev_sd, const model& m);
 

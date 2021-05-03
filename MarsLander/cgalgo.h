@@ -294,7 +294,7 @@ chromosome generate_random_chromosome();
 population generate_random_population();
 gene generate_random_gene();
 
-bool is_a_valid_landing(const simulation_data& sd);
+bool is_a_valid_landing(const simulation_data& sd, const simulation_data& sd_prev);
 
 /*
  This method fills surface_points with the terrain,
@@ -304,7 +304,7 @@ bool is_a_valid_landing(const simulation_data& sd);
  */
 void read_input(std::stringstream& strcin, std::stringstream& strerr);
 
-simulation_data run_chromosome(const chromosome& c);
+void run_chromosome(simulation_data& sd, simulation_data& prev_sd, const chromosome& c);
 
 /*
  Returns a score. Larger score is bad.
