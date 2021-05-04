@@ -146,9 +146,6 @@ void fill_renderer_with_simulation(model& m) {
     m._path_vbo_array.back()->release();
     gl_check_error("m._path_vbo_array.back()->release()");
   }
-  //for (auto s : m.current_population_normalized_score) {
-  //  Logging::Info() << "score " << s << "\n";
-  //}
 }
 
 void simulate_population(model& m) {

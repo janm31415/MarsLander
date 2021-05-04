@@ -283,9 +283,9 @@ typedef std::vector<gene> chromosome;
 typedef std::vector<chromosome> population;
 
 extern std::vector<vec2<int>> surface_points;
-extern std::vector<int> heights;
 extern int landing_zone_x0;
 extern int landing_zone_x1;
+extern int landing_zone_y;
 extern simulation_data simdata;
 extern double elitarism_factor;
 extern double mutation_chance;

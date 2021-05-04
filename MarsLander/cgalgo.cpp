@@ -13,43 +13,20 @@ template <class T>
 inline T sqr(T a) { return a*a; }
 
 std::vector<vec2<int>> surface_points;
-std::vector<int> heights;
 RKISS rkiss;
-int landing_zone_x0, landing_zone_x1;
+int landing_zone_x0, landing_zone_x1, landing_zone_y;
 simulation_data simdata;
 
-std::vector<int> compute_terrain_heights(const std::vector<vec2<int>>& pts) {
-  std::vector<int> heights;
-  heights.reserve(W);
-  auto it = pts.begin();
-  auto it_next = it;
-  ++it_next;
-  for (int x = 0; x < W; ++x) {
-    if (x > it_next->x) {
-      ++it;
-      ++it_next;
-    }
-    
-    float alpha = (float)(x - it->x)/(float)(it_next->x - it->x);
-    float y_value = (1.f-alpha)*it->y + alpha*it_next->y;
-    heights.push_back((int)std::ceil(y_value));
-  }
-  
-  return heights;
-}
-
-void find_landingzone(int& x0, int& x1, const std::vector<int>& heights) {
+void find_landingzone(int& x0, int& x1, int& y, const std::vector<vec2<int>>& pts) {
   x0 = x1 = 0;
-  int startcandidate = 0;
-  for (int i = 1; i < heights.size(); ++i) {
-    if (heights[i] != heights[startcandidate]) {
-      int new_length = i-1-startcandidate;
-      int old_length = x1-x0;
-      if (new_length > old_length) {
-        x0 = startcandidate;
-        x1 = i-1;
-      }
-      startcandidate = i;
+  for (int i = 1; i < pts.size(); ++i) {
+    if (pts[i].y == pts[i-1].y && std::abs(pts[i].x-pts[i-1].x)>=1000) {
+      x0 = pts[i].x;
+      x1 = pts[i-1].x;
+      y = pts[i].y;
+      if (x1<x0)
+        std::swap(x0,x1);
+      return;
     }
   }
 }
@@ -144,8 +121,7 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
     strerr << landX << " " << landY << std::endl;
     surface_points.emplace_back(landX, landY);
   }
-  heights = compute_terrain_heights(surface_points);
-  find_landingzone(landing_zone_x0, landing_zone_x1, heights);
+  find_landingzone(landing_zone_x0, landing_zone_x1, landing_zone_y, surface_points);
   
   int X;
   int Y;
@@ -163,17 +139,81 @@ void read_input(std::stringstream& strcin, std::stringstream& strerr) {
   simdata.P = P;
 }
 
+// Given three colinear points p, q, r, the function checks if
+// point q lies on line segment 'pr'
+bool onSegment(const vec2<int>& p, const vec2<int>& q, const vec2<int>& r)
+{
+  if (q.x <= std::max(p.x, r.x) && q.x >= std::min(p.x, r.x) &&
+      q.y <= std::max(p.y, r.y) && q.y >= std::min(p.y, r.y))
+    return true;
+  
+  return false;
+}
+
+// To find orientation of ordered triplet (p, q, r).
+// The function returns following values
+// 0 --> p, q and r are colinear
+// 1 --> Clockwise
+// 2 --> Counterclockwise
+int orientation(const vec2<int>& p, const vec2<int>& q, const vec2<int>& r)
+{
+  // See https://www.geeksforgeeks.org/orientation-3-ordered-points/
+  // for details of below formula.
+  int val = (q.y - p.y) * (r.x - q.x) -
+  (q.x - p.x) * (r.y - q.y);
+  
+  if (val == 0) return 0;  // colinear
+  
+  return (val > 0)? 1: 2; // clock or counterclock wise
+}
+
+bool intersects(const vec2<int>& p1, const vec2<int>& q1, const vec2<int>& p2, const vec2<int>& q2) {
+  // Find the four orientations needed for general and
+  // special cases
+  int o1 = orientation(p1, q1, p2);
+  int o2 = orientation(p1, q1, q2);
+  int o3 = orientation(p2, q2, p1);
+  int o4 = orientation(p2, q2, q1);
+  
+  // General case
+  if (o1 != o2 && o3 != o4)
+    return true;
+  
+  // Special Cases
+  // p1, q1 and p2 are colinear and p2 lies on segment p1q1
+  if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+  
+  // p1, q1 and q2 are colinear and q2 lies on segment p1q1
+  if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+  
+  // p2, q2 and p1 are colinear and p1 lies on segment p2q2
+  if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+  
+  // p2, q2 and q1 are colinear and q1 lies on segment p2q2
+  if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+  
+  return false; // Doesn't fall in any of the above cases
+}
+
 bool crashed_or_landed(int X, int Y, int PX, int PY) {
-  if (X==PX)
-    return Y<=heights[X];
-  if (X>PX) {
-    std::swap(X,PX);
-    std::swap(Y,PY);
-  }
-  for (int x = X; x <= PX; ++x) {
-    double alpha = (double)(x-X)/(double)(PX-X);
-    double y = Y+alpha*(PY-Y);
-    if ((int)std::round(y) <= heights[x])
+  /*
+   if (X==PX)
+   return Y<=heights[X];
+   if (X>PX) {
+   std::swap(X,PX);
+   std::swap(Y,PY);
+   }
+   for (int x = X; x <= PX; ++x) {
+   double alpha = (double)(x-X)/(double)(PX-X);
+   double y = Y+alpha*(PY-Y);
+   if ((int)std::round(y) <= heights[x])
+   return true;
+   }
+   return false;
+   */
+  vec2<int> p2(X,Y), q2(PX,PY);
+  for (int i = 1; i < surface_points.size(); ++i) {
+    if (intersects(surface_points[i-1], surface_points[i], p2, q2))
       return true;
   }
   return false;
@@ -296,14 +336,14 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int x1 = landing_zone_x1 - lz_buffer;
   float dsqr = 0;
   if (X < x0) {
-    dsqr = distance_sqr(sd.p, vec2<float>(x0, heights[x0]));
+    dsqr = distance_sqr(sd.p, vec2<float>(x0, landing_zone_y));
   } else if (X > x1) {
-    dsqr = distance_sqr(sd.p, vec2<float>(x1, heights[x1]));
+    dsqr = distance_sqr(sd.p, vec2<float>(x1, landing_zone_y));
   }
   
   if (dsqr < 100*100)
     score += sd.F;
-    
+  
   if ((int64_t)dsqr < W*W)
     score += W*W-(int64_t)dsqr;
   
@@ -387,10 +427,10 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   int X = (int)std::round(sd.p[0]);
   int Y = (int)std::round(sd.p[1]);
   
-  if (Y > heights[X])
-    score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
+  //if (Y > heights[X])
+  //  score += (Y-heights[X])*did_not_reach_solid_ground_multiplier;
   
-  vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, heights[landing_zone_x0]);
+  vec2<float> lz((landing_zone_x0+landing_zone_x1)/2, landing_zone_y);
   
   int64_t dsqr = (int64_t)distance_sqr(sd.p, lz);
   /*
@@ -420,9 +460,9 @@ bool is_a_valid_landing(const simulation_data& sd, const simulation_data& prev_s
     return false;
   if (abs(sd.v[1])>maximum_vertical_speed)
     return false;
-  if (prev_sd.p[1] <= heights[landing_zone_x0])
+  if (prev_sd.p[1] <= landing_zone_y)
     return false;
-  if (sd.p[1]>heights[landing_zone_x0])
+  if (sd.p[1]>landing_zone_y)
     return false;
   return true;
 }
@@ -436,7 +476,7 @@ void normalize_scores_roulette_wheel(std::vector<double>& out, const std::vector
 #if defined(EVALUATION_A)
     sum += s;
 #elif defined(EVALUATION_B)
-    sum += (int64_t)(M-s);
+  sum += (int64_t)(M-s);
 #endif
   static std::vector<std::pair<double, int>> temp(score.size());
   for (int i = 0; i < score.size(); ++i) {
@@ -504,7 +544,7 @@ void make_next_generation(population& new_pop, const population& current, const 
   if (score_index.size() != score.size())
     score_index.resize(score.size());
   for (int i = 0; i < score.size(); ++i)
-    score_index[i] = std::pair<double, int>(score[i], i);
+  score_index[i] = std::pair<double, int>(score[i], i);
   std::sort(score_index.begin(), score_index.end(), [](const auto& left, const auto& right) { return left.first > right.first;});
   int elitair_chromosomes_to_copy = (int)(score.size()*elitarism_factor);
   if ((score.size()-elitair_chromosomes_to_copy)%2)
@@ -534,5 +574,5 @@ void make_next_generation(population& new_pop, const population& current, const 
     }
     make_children(new_pop[2*i+elitair_chromosomes_to_copy], new_pop[2*i+1+elitair_chromosomes_to_copy], current[first_parent_index], current[second_parent_index]);
   }
-
+  
 }

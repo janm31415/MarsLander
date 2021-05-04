@@ -122,7 +122,33 @@ _viewport_pos_x(V_X), _viewport_pos_y(V_Y)
   6999 800
   2500 2700 0 0 550 0 0
   )";
-  
+  /*
+  _script=R"(22
+0 450
+300 750
+1000 450
+1500 650
+1800 850
+2000 1950
+2200 1850
+2400 2000
+3100 1800
+3150 1550
+2500 1600
+2200 1550
+2100 750
+2200 150
+3200 150
+3500 450
+4000 950
+4500 1450
+5000 1550
+5500 1500
+6000 950
+6999 1750
+6500 2600 -20 0 1000 45 0
+  )";
+  */
   init_model(_m, _script);
   make_random_population(_m);
   simulate_population(_m);
@@ -559,6 +585,7 @@ void view::_prepare_render()
 void view::_print_best_run_results(){
   simulation_data sd, prev_sd;
   get_best_run_results(sd, prev_sd, _m);
+  
   Logging::Info() << "Current best result after " << _total_iterations << " iterations:\n";
   Logging::Info() << "  X: " << (int)std::round(sd.p.x) << "\n";
   Logging::Info() << "  Y: " << (int)std::round(sd.p.y) << "\n";
@@ -567,6 +594,7 @@ void view::_print_best_run_results(){
   Logging::Info() << "  R: " << sd.R << "\n";
   Logging::Info() << "  P: " << sd.P << "\n";
   Logging::Info() << "  F: " << sd.F << "\n";
+  
   if (is_a_valid_landing(sd, prev_sd)) {
     _playing = false;
     Logging::Warning() << "!!!VALID LANDING!!!\n";
