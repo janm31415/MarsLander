@@ -331,7 +331,7 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   
   int X = (int)std::round(sd.p[0]);
   int Y = (int)std::round(sd.p[1]);
-  
+  /*
   int x0 = landing_zone_x0 + lz_buffer;
   int x1 = landing_zone_x1 - lz_buffer;
   float dsqr = 0;
@@ -340,12 +340,20 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   } else if (X > x1) {
     dsqr = distance_sqr(sd.p, vec2<float>(x1, landing_zone_y));
   }
+  */
+  
+  float dsqr = distance_sqr(sd.p, vec2<float>((landing_zone_x0+landing_zone_x1)*0.5f, landing_zone_y));
   
   if (dsqr < 100*100)
     score += sd.F;
   
   if ((int64_t)dsqr < W*W)
     score += W*W-(int64_t)dsqr;
+    
+  if (X>0 && X<W-1 && Y>0 && Y < H-1 && (X>landing_zone_x1 || X<landing_zone_x0))
+    score += sqr(Y);
+  else
+    score += H*H;
   
   return score < 0 ? 0 : score;
 }

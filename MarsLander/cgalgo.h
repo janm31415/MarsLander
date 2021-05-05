@@ -11,7 +11,7 @@
 
 #define W 7000
 #define H 3000
-#define chromosome_size 200
+#define chromosome_size 250
 #define population_size 200
 #define maximum_vertical_speed 40
 #define maximum_horizontal_speed 20
