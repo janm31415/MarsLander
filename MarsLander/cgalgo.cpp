@@ -306,7 +306,7 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
   
   if (std::abs(sd_prev2.R)>maximum_angle_rotation) {
     score -= landing_error_penalty*(std::abs(sd_prev2.R)-maximum_angle_rotation);
-  } else if (i>0) {
+  } else if (i>0 && i < chromosome_size) {
     c[i-1].angle = -sd_prev2.R;
     c[i].angle = 0;
     sd = sd_prev2;
@@ -315,7 +315,10 @@ int64_t evaluate(std::vector<vec2<float>>& path, chromosome& c) {
     simulate(sd, 0, clamp_thrust(t+c[i].thrust));
   } else if (i==0) {
     c[i].angle = 0;
-  }
+  } else if (i == chromosome_size) 
+    {
+
+    }
   
   if (std::abs(sd_prev.v[1])>maximum_vertical_speed)
     score -= landing_error_penalty*(std::abs(sd_prev.v[1])-maximum_vertical_speed);
@@ -567,7 +570,7 @@ void make_next_generation(population& new_pop, const population& current, const 
   for (int i = 0; i < children/2; ++i) {
     double r = rand_double();
     int idx = 0;
-    while (score_index[idx].first>r && idx < score_index.size())
+    while (idx < score_index.size() && score_index[idx].first>r)
       ++idx;
     --idx;
     int first_parent_index = score_index[idx].second;
@@ -575,7 +578,7 @@ void make_next_generation(population& new_pop, const population& current, const 
     while (second_parent_index == first_parent_index) {
       r = rand_double();
       idx = 0;
-      while (score_index[idx].first>r && idx < score_index.size())
+      while (idx < score_index.size() && score_index[idx].first>r)
         ++idx;
       --idx;
       second_parent_index = score_index[idx].second;

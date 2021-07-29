@@ -1,14 +1,13 @@
 #include "view.h"
+#include <glew/GL/glew.h>
 #include <iostream>
-#include <SDL_syswm.h>
+//#include <SDL_syswm.h>
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_stdlib.h"
 #include "imguifilesystem.h"
-
-#include <glew/GL/glew.h>
 
 #include <stdexcept>
 #include <chrono>

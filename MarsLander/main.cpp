@@ -1,7 +1,7 @@
 #ifndef _SDL_main_h
 #define _SDL_main_h
 #endif
-
+#include <glew/GL/glew.h>
 #include <SDL.h>
 
 #include <stdio.h>
