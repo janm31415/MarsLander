@@ -10,12 +10,15 @@
 #include "model.h"
 #include "mouse_data.h"
 
-class buffer_object;
-class shader_program;
-class frame_buffer_object;
-class render_buffer;
-class texture;
-class vertex_array_object;
+namespace jtk
+  {
+  class buffer_object;
+  class shader_program;
+  class frame_buffer_object;
+  class render_buffer;
+  class texture;
+  class vertex_array_object;
+  }
 
 class view
   {
@@ -44,12 +47,12 @@ class view
     uint32_t _w, _h, _viewport_w, _viewport_h, _viewport_pos_x, _viewport_pos_y;
     bool _quit;
     settings _settings;    
-    frame_buffer_object* _fbo;  
-    buffer_object* _vbo_array_blit;
-    buffer_object* _vbo_index_blit;
-    vertex_array_object* _vao_blit;
-    shader_program* _program;   
-    shader_program* _program_blit;
+    jtk::frame_buffer_object* _fbo;  
+    jtk::buffer_object* _vbo_array_blit;
+    jtk::buffer_object* _vbo_index_blit;
+    jtk::vertex_array_object* _vao_blit;
+    jtk::shader_program* _program;   
+    jtk::shader_program* _program_blit;
     mouse_data _md;
     model _m;
     std::string _script;

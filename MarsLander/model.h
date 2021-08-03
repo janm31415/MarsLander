@@ -6,8 +6,11 @@
 
 #include "cgalgo.h"
 
-class buffer_object;
-class vertex_array_object;
+namespace jtk
+  {
+  class buffer_object;
+  class vertex_array_object;
+  }
 
 
 struct model
@@ -22,11 +25,11 @@ struct model
   population current_population, next_population;
   std::vector<double> current_population_normalized_score;
 
-  vertex_array_object* _vao;
-  buffer_object *_vbo_array;
+  jtk::vertex_array_object* _vao;
+  jtk::buffer_object *_vbo_array;
   
-  std::vector<vertex_array_object*> _path_vao;
-  std::vector<buffer_object*> _path_vbo_array;
+  std::vector<jtk::vertex_array_object*> _path_vao;
+  std::vector<jtk::buffer_object*> _path_vbo_array;
   };
 
 

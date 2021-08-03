@@ -29,38 +29,22 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../imgui_sdl/imguifilesystem.cpp
 )
 
 set(HDRS
-buffer_object.h
 cgalgo.h
-depthtexture.h
-frame_buffer_object.h
 logging.h
 model.h
 mouse_data.h
 pref_file.h
-render_buffer.h
 settings.h
-shader.h
-shader_program.h
-texture.h
-vertex_array_object.h
 view.h
     )
 	
 set(SRCS
-buffer_object.cpp
 cgalgo.cpp
-depthtexture.cpp
-frame_buffer_object.cpp
 logging.cpp
 model.cpp
 pref_file.cpp
-render_buffer.cpp
 main.cpp
 settings.cpp
-shader.cpp
-shader_program.cpp
-texture.cpp
-vertex_array_object.cpp
 view.cpp
 )
 
